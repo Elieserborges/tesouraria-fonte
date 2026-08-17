@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Identidade visual — Tesouraria Fonte
+   Azul  #3345ED  confiança / segurança / inteligência
+   Verde #20A979  equilíbrio / finanças / estabilidade
+   ============================================================ */
+
+@theme {
+  --color-marca-50: #eef1fe;
+  --color-marca-100: #dbe2fd;
+  --color-marca-200: #bcc8fb;
+  --color-marca-300: #8fa3f8;
+  --color-marca-400: #4a7aff;
+  --color-marca-500: #3345ed;
+  --color-marca-600: #2734c9;
+  --color-marca-700: #202aa0;
+  --color-marca-800: #1c2580;
+  --color-marca-900: #172672;
+  --color-marca-950: #0e1547;
+
+  --color-verde-50: #e7fbf3;
+  --color-verde-100: #c6f5e3;
+  --color-verde-200: #01e3a4;
+  --color-verde-300: #34d3a3;
+  --color-verde-400: #20a979;
+  --color-verde-500: #189169;
+  --color-verde-600: #15724e;
+  --color-verde-700: #115c40;
+  --color-verde-800: #0d4531;
+  --color-verde-900: #082e21;
+
+  --color-alerta: #e5484d;
+  --color-atencao: #f5a524;
+  --color-carvao: #161515;
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+/* ---------- Tokens semânticos (claro) ---------- */
+:root {
+  --fundo: #f5f7fb;
+  --superficie: #ffffff;
+  --superficie-2: #f0f3f9;
+  --borda: #e2e7f0;
+  --texto: #101a33;
+  --texto-suave: #5b6784;
+  --primaria: #3345ed;
+  --primaria-contraste: #ffffff;
+  --entrada: #15724e;
+  --saida: #c0353a;
+  --sombra: 0 1px 2px rgb(16 26 51 / 0.06), 0 8px 24px -12px rgb(16 26 51 / 0.18);
+}
+
+/* ---------- Tokens semânticos (escuro) ---------- */
+:root[data-tema="escuro"] {
+  --fundo: #0b1020;
+  --superficie: #131a30;
+  --superficie-2: #1a2340;
+  --borda: #26304f;
+  --texto: #eef1f8;
+  --texto-suave: #98a3c0;
+  --primaria: #4a7aff;
+  --primaria-contraste: #0b1020;
+  --entrada: #34d3a3;
+  --saida: #ff6b70;
+  --sombra: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.7);
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-borda: var(--borda);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-primaria: var(--primaria);
+  --color-primaria-contraste: var(--primaria-contraste);
+  --color-entrada: var(--entrada);
+  --color-saida: var(--saida);
+}
+
+body {
+  background-color: var(--fundo);
+  color: var(--texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cartão padrão do dashboard */
+.cartao {
+  background-color: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 1rem;
+  box-shadow: var(--sombra);
+}
+
+/* Barra de rolagem discreta */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--borda) transparent;
+}
+
+/* Recharts: remove o outline azul do foco no SVG */
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none;
+}
