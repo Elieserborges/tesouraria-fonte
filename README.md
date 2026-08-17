@@ -14,10 +14,14 @@ tesouraria e o Conselho Fiscal.
 1. Crie um projeto em <https://supabase.com> (plano gratuito serve).
 2. Abra **SQL Editor** e rode o conteúdo de [`supabase/schema.sql`](supabase/schema.sql).
    Ele cria tabelas, políticas de RLS, a view de saldos, as categorias padrão e
-   três contas (`conta-1`, `conta-2`, `conta-3`).
-3. Ajuste os nomes das contas em **Table Editor → contas** (e preencha
-   `mp_user_id` com o *collector id* de cada conta do Mercado Pago — é o que
-   permite distinguir entrada de saída).
+   uma conta (`conta-1`).
+3. Em **Table Editor → contas**, ajuste o nome da conta e preencha `mp_user_id`
+   com o *collector id* da conta do Mercado Pago — é o que permite distinguir
+   entrada de saída.
+
+Para acrescentar outra conta no futuro, insira uma linha em `contas` com slug
+`conta-2` e cadastre as variáveis `MP_ACCESS_TOKEN_CONTA_2` e
+`MP_WEBHOOK_SECRET_CONTA_2`. O sistema não tem limite de contas.
 
 ## 2. Criar os usuários
 
@@ -66,8 +70,13 @@ cp .env.example .env.local
   **Project Settings → API**.
 - `SUPABASE_SERVICE_ROLE_KEY`: mesma tela. **Nunca** exponha no navegador —
   é usada só pelo webhook.
-- `MP_ACCESS_TOKEN_<CONTA>` e `MP_WEBHOOK_SECRET_<CONTA>`: um par por conta.
-  O sufixo vem do `slug` da conta em maiúsculas (`conta-1` → `CONTA_1`).
+- `MP_ACCESS_TOKEN_CONTA_1` e `MP_WEBHOOK_SECRET_CONTA_1`: credenciais da conta
+  do Mercado Pago. O sufixo vem do `slug` da conta em maiúsculas
+  (`conta-1` → `CONTA_1`), então cada conta nova tem seu próprio par.
+
+Em produção, essas variáveis vão no painel da Vercel
+(**Settings → Environment Variables**), não neste arquivo — o `.env.local`
+nunca é enviado no deploy.
 
 ## 4. Rodar
 
@@ -81,7 +90,7 @@ Abra <http://localhost:3000>.
 
 ## 5. Webhook do Mercado Pago
 
-Cada conta tem sua própria URL:
+Cada conta tem sua própria URL, formada pelo `slug`:
 
 ```
 https://SEU-DOMINIO/api/webhooks/mercadopago/conta-1

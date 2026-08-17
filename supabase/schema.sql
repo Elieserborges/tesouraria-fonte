@@ -230,10 +230,12 @@ group by c.id, c.nome, c.cor;
 -- =============================================================
 -- Dados iniciais
 -- =============================================================
+-- Uma conta por conta do Mercado Pago. O `slug` é o que aparece na URL do
+-- webhook e define o sufixo das variáveis de ambiente (conta-1 -> CONTA_1).
+-- Para acrescentar outra conta depois, insira uma linha com slug 'conta-2'
+-- e cadastre MP_ACCESS_TOKEN_CONTA_2 / MP_WEBHOOK_SECRET_CONTA_2.
 insert into public.contas (slug, nome, descricao, cor) values
-  ('conta-1', 'Conta 1', 'Mercado Pago — conta principal', '#3345ED'),
-  ('conta-2', 'Conta 2', 'Mercado Pago — conta secundária', '#20A979'),
-  ('conta-3', 'Conta 3', 'Mercado Pago — conta terciária', '#4A7AFF')
+  ('conta-1', 'Conta 1', 'Mercado Pago', '#3345ED')
 on conflict (slug) do nothing;
 
 insert into public.categorias (nome, tipo, cor) values
