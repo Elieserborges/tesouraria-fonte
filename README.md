@@ -114,6 +114,24 @@ O que a rota faz, em ordem:
 
 Só `status = 'approved'` entra no cálculo de saldo (ver a view `saldo_por_conta`).
 
+### Importar o histórico
+
+O webhook só entrega o que acontece **depois** de cadastrado. Para trazer os
+pagamentos antigos e ter saldo e gráficos com dados reais:
+
+```bash
+npm run importar -- 2026-01 --simular   # confere o que viria, sem gravar
+npm run importar -- 2026-01             # grava
+```
+
+Sem argumento, importa os últimos 12 meses. Aceita `AAAA-MM` ou `AAAA-MM-DD`,
+e um segundo argumento com o slug da conta (padrão `conta-1`).
+
+Usa `upsert` por `mp_payment_id`, igual ao webhook: rodar duas vezes não
+duplica, e pagamentos já categorizados à mão mantêm a categoria. Requer
+`MP_ACCESS_TOKEN_CONTA_1` no `.env.local` (o script roda na sua máquina, não
+no servidor).
+
 ### Testar localmente
 
 O Mercado Pago precisa alcançar sua máquina. Use um túnel:

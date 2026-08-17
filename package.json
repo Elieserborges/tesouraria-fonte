@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "checar": "node --env-file=.env.local scripts/checar-conexao.mjs",
-    "promover": "node --env-file=.env.local scripts/promover-admin.mjs"
+    "promover": "node --env-file=.env.local scripts/promover-admin.mjs",
+    "importar": "node --env-file=.env.local scripts/importar-historico.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
