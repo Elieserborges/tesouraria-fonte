@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ArrowLeftRight, Tags, Users } from "lucide-react";
+import {
+  LayoutDashboard,
+  ArrowLeftRight,
+  ChartColumn,
+  Tags,
+  Users,
+} from "lucide-react";
 
 const ITENS = [
   { href: "/dashboard", rotulo: "Visão geral", Icone: LayoutDashboard, soAdmin: false },
   { href: "/transacoes", rotulo: "Transações", Icone: ArrowLeftRight, soAdmin: false },
+  { href: "/relatorios", rotulo: "Relatórios", Icone: ChartColumn, soAdmin: false },
   { href: "/categorias", rotulo: "Categorias", Icone: Tags, soAdmin: false },
   { href: "/usuarios", rotulo: "Usuários", Icone: Users, soAdmin: true },
 ] as const;

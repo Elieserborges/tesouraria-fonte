@@ -208,6 +208,57 @@ export function fluxoDiario(
   return [...pontos.values()];
 }
 
+export type ResumoCategoria = {
+  nome: string;
+  cor: string;
+  entradas: number;
+  saidas: number;
+  resultado: number;
+  lancamentos: number;
+};
+
+/**
+ * Entradas x saídas por categoria, agrupadas pelo NOME.
+ *
+ * O agrupamento é por nome porque cada categoria existe separada para
+ * entrada e para saída. Um evento como "Face a Face" arrecada por uma e
+ * gasta pela outra — juntar pelo nome é o que mostra se ele se pagou.
+ *
+ * Transferências entre contas ficam de fora: não são receita nem despesa.
+ */
+export function resumoPorCategoria(
+  transacoes: TransacaoComRelacoes[],
+): ResumoCategoria[] {
+  const mapa = new Map<string, ResumoCategoria>();
+
+  for (const t of transacoes) {
+    if (t.status !== "approved" || ehTransferencia(t)) continue;
+
+    const nome = t.categoria?.nome ?? "Sem categoria";
+    const atual =
+      mapa.get(nome) ??
+      {
+        nome,
+        cor: t.categoria?.cor ?? "#94A3B8",
+        entradas: 0,
+        saidas: 0,
+        resultado: 0,
+        lancamentos: 0,
+      };
+
+    if (t.tipo === "entrada") atual.entradas += t.valor;
+    else atual.saidas += t.valor;
+    atual.resultado = atual.entradas - atual.saidas;
+    atual.lancamentos += 1;
+
+    mapa.set(nome, atual);
+  }
+
+  return [...mapa.values()].sort(
+    (a, b) => b.entradas + b.saidas - (a.entradas + a.saidas),
+  );
+}
+
 export type FatiaCategoria = { nome: string; cor: string; valor: number };
 
 export function porCategoria(
