@@ -10,7 +10,8 @@
     "checar": "node --env-file=.env.local scripts/checar-conexao.mjs",
     "promover": "node --env-file=.env.local scripts/promover-admin.mjs",
     "importar": "node --env-file=.env.local scripts/importar-historico.mjs",
-    "importar-extrato": "node --env-file=.env.local scripts/importar-extrato-pdf.mjs"
+    "importar-extrato": "node --env-file=.env.local scripts/importar-extrato-pdf.mjs",
+    "enriquecer": "node --env-file=.env.local scripts/enriquecer-nomes.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
