@@ -232,10 +232,11 @@ begin
            r.categoria_id
       from public.transacoes t
       join public.regras_categoria r
-        on r.tipo = t.tipo
+        -- padrão vazio nunca vale: casaria com toda transação sem descrição
+        on r.tipo = t.tipo and r.padrao <> ''
        and (
          (r.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = r.padrao)
-         or (r.modo = 'contem' and r.padrao <> ''
+         or (r.modo = 'contem'
              and lower(btrim(coalesce(t.descricao, ''))) like '%' || r.padrao || '%')
        )
      where t.categoria_id is null or t.categoria_automatica

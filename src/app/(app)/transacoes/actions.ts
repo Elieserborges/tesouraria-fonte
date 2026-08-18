@@ -7,7 +7,11 @@ import { padraoDaDescricao, podeEditar } from "@/lib/types";
 export type EstadoFormulario = { erro?: string; sucesso?: string };
 
 /** Resultado de categorizar: quantas outras transações foram junto. */
-export type ResultadoCategoria = EstadoFormulario & { tambem?: number };
+export type ResultadoCategoria = EstadoFormulario & {
+  tambem?: number;
+  /** true quando a transacao nao tem descricao e por isso nao gerou regra. */
+  semRegra?: boolean;
+};
 
 async function sessaoEditor() {
   const sessao = await obterSessao();
@@ -31,6 +35,7 @@ export async function atribuirCategoria(
   criarRegra = true,
 ): Promise<ResultadoCategoria> {
   let tambem = 0;
+  let semRegra = false;
 
   try {
     const { supabase, user } = await sessaoEditor();
@@ -51,9 +56,16 @@ export async function atribuirCategoria(
 
     if (error) return { erro: error.message };
 
-    if (categoriaId && criarRegra) {
-      const { padrao, modo } = padraoDaDescricao(transacao.descricao);
+    const { padrao, modo } = padraoDaDescricao(transacao.descricao);
 
+    // Transação sem descrição não vira regra: o "vazio" não identifica nada
+    // e casaria com todas as outras sem descrição. Aconteceu uma vez —
+    // uma classificação arrastou 392 lançamentos (R$ 54 mil) para a
+    // categoria errada.
+    const podeVirarRegra = categoriaId && criarRegra && padrao !== "";
+    semRegra = Boolean(categoriaId) && criarRegra && padrao === "";
+
+    if (podeVirarRegra) {
       const { error: erroRegra } = await supabase
         .from("regras_categoria")
         .upsert(
@@ -83,7 +95,7 @@ export async function atribuirCategoria(
   revalidatePath("/transacoes");
   revalidatePath("/dashboard");
   revalidatePath("/categorias");
-  return { sucesso: "Categoria atualizada.", tambem };
+  return { sucesso: "Categoria atualizada.", tambem, semRegra };
 }
 
 /** Lançamento manual (saídas em dinheiro, ajustes, saldo inicial). */

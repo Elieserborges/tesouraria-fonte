@@ -33,7 +33,13 @@ export function TabelaTransacoes({
         setErro(r.erro);
         return;
       }
-      if (r.tambem && r.tambem > 0) {
+      if (r.semRegra) {
+        setAviso(
+          "Categoria aplicada só nesta linha. Como a transação não tem " +
+            "descrição, não dá para criar regra: o 'vazio' casaria com todos " +
+            "os outros Pix sem identificação.",
+        );
+      } else if (r.tambem && r.tambem > 0) {
         setAviso(
           `${r.tambem} transação${r.tambem === 1 ? "" : "ões"} com a mesma descrição ` +
             `também foi${r.tambem === 1 ? "" : "ram"} categorizada${r.tambem === 1 ? "" : "s"}. ` +
