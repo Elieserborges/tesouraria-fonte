@@ -133,6 +133,8 @@ export function ListaRegras({
           Criadas quando você categoriza uma transação. Se a regra pegou poucas
           transações, encurte o texto — ex.: deixe só{" "}
           <em>inscrição café com dança</em> para valer para todos os inscritos.
+          Trocar a categoria de uma transação atualiza a regra e todas as que
+          ela já havia classificado; as que você marcou à mão ficam como estão.
         </p>
       </header>
 

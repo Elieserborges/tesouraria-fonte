@@ -205,9 +205,19 @@ create index if not exists transacoes_descricao_norm_idx
   on public.transacoes (lower(btrim(coalesce(descricao, ''))));
 
 /*
- * Preenche a categoria das transações que casam com alguma regra.
- * Só toca em transação SEM categoria — nunca sobrescreve escolha manual.
- * Devolve quantas foram classificadas.
+ * Aplica as regras às transações.
+ *
+ * Alcança dois casos:
+ *   1. transação sem categoria  -> recebe a da regra
+ *   2. categoria posta por regra -> passa a seguir a regra atual
+ *
+ * O que foi classificado à mão (categoria_automatica = false) nunca é
+ * tocado: decisão de pessoa vence regra. Mas se a própria regra colocou a
+ * categoria, mudar a regra tem que refletir nas antigas também — senão
+ * trocar de ideia deixaria um rastro de transações com a categoria velha.
+ *
+ * Quando mais de uma regra casa, vence a mais específica: 'exata' antes de
+ * 'contem', e entre iguais o padrão mais longo.
  */
 create or replace function public.aplicar_regras_categoria()
 returns integer
@@ -216,17 +226,27 @@ as $$
 declare
   afetadas integer;
 begin
+  with correspondencia as (
+    select distinct on (t.id)
+           t.id as transacao_id,
+           r.categoria_id
+      from public.transacoes t
+      join public.regras_categoria r
+        on r.tipo = t.tipo
+       and (
+         (r.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = r.padrao)
+         or (r.modo = 'contem' and r.padrao <> ''
+             and lower(btrim(coalesce(t.descricao, ''))) like '%' || r.padrao || '%')
+       )
+     where t.categoria_id is null or t.categoria_automatica
+     order by t.id, (r.modo = 'exata') desc, length(r.padrao) desc, r.criado_em desc
+  )
   update public.transacoes t
-     set categoria_id = r.categoria_id,
+     set categoria_id = c.categoria_id,
          categoria_automatica = true
-    from public.regras_categoria r
-   where t.categoria_id is null
-     and t.tipo = r.tipo
-     and (
-       (r.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = r.padrao)
-       or (r.modo = 'contem' and r.padrao <> ''
-           and lower(btrim(coalesce(t.descricao, ''))) like '%' || r.padrao || '%')
-     );
+    from correspondencia c
+   where t.id = c.transacao_id
+     and t.categoria_id is distinct from c.categoria_id;
 
   get diagnostics afetadas = row_count;
   return afetadas;
