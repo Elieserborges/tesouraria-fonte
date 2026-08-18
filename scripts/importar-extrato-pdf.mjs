@@ -162,6 +162,10 @@ const catTransferencia = Object.fromEntries((cats ?? []).map((c) => [c.tipo, c.i
 const inserir = [];
 const corrigirTipo = [];
 const marcarTransferencia = [];
+// Tarifa = o que a pessoa pagou (bruto, vindo da API) menos o que caiu na
+// conta (líquido, vindo do extrato). É despesa real, e sem ela o saldo
+// calculado fica sempre acima do saldo de verdade.
+const tarifaPorMes = new Map();
 
 for (const m of porId.values()) {
   const tipo = m.valor < 0 ? "saida" : "entrada";
@@ -190,7 +194,36 @@ for (const m of porId.values()) {
   if (transferencia && !existente.categoria_id) {
     marcarTransferencia.push({ id: existente.id, tipo });
   }
+
+  if (m.valor > 0 && existente.tipo === "entrada" && !transferencia) {
+    const tarifa = Number(existente.valor) - m.valor;
+    if (tarifa > 0.004) {
+      const mes = m.ocorridoEm.slice(0, 7);
+      tarifaPorMes.set(mes, (tarifaPorMes.get(mes) ?? 0) + tarifa);
+    }
+  }
 }
+
+// Uma linha de tarifa por mês, com id fixo para poder reprocessar sem duplicar.
+const { data: catTarifa } = await admin
+  .from("categorias")
+  .select("id")
+  .eq("nome", "Tarifas bancárias")
+  .eq("tipo", "saida")
+  .maybeSingle();
+
+const tarifas = [...tarifaPorMes.entries()].map(([mes, valor]) => ({
+  conta_id: conta.id,
+  tipo: "saida",
+  valor: Number(valor.toFixed(2)),
+  descricao: `Tarifas do Mercado Pago — ${mes}`,
+  status: "approved",
+  ocorrido_em: new Date(`${mes}-01T12:00:00-03:00`).toISOString(),
+  origem: "extrato",
+  mp_payment_id: `tarifas-${conta.slug}-${mes}`,
+  categoria_id: catTarifa?.id ?? null,
+  categoria_automatica: Boolean(catTarifa),
+}));
 
 const soma = (l, f = (x) => Number(x.valor)) => l.reduce((s, x) => s + f(x), 0);
 const moeda = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -200,6 +233,7 @@ console.log(`  sendo saídas:       ${inserir.filter((x) => x.tipo === "saida").
 console.log(`  já como transferência: ${inserir.filter((x) => x.categoria_id).length}`);
 console.log(`SINAL A CORRIGIR:     ${corrigirTipo.length}`);
 console.log(`A MARCAR COMO TRANSFERÊNCIA: ${marcarTransferencia.length}`);
+console.log(`TARIFAS:              ${tarifas.length} mês(es), ${moeda(soma(tarifas))}`);
 
 if (!GRAVAR) {
   console.log("\nSimulação. Rode de novo com --gravar para aplicar.");
@@ -232,6 +266,14 @@ for (const t of marcarTransferencia) {
     .eq("id", t.id);
 }
 console.log(`✓ ${marcarTransferencia.length} marcada(s) como transferência`);
+
+if (tarifas.length) {
+  const { error } = await admin
+    .from("transacoes")
+    .upsert(tarifas, { onConflict: "mp_payment_id" });
+  if (error) { console.error(`✗ tarifas: ${error.message}`); process.exit(1); }
+  console.log(`✓ ${tarifas.length} lançamento(s) de tarifa (${moeda(soma(tarifas))})`);
+}
 
 const { data: saldo } = await admin.from("saldo_por_conta").select("*");
 console.log("\n--- saldo por conta ---");
