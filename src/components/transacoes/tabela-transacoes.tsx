@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowDownLeft, ArrowUpRight, Trash2, Zap } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Trash2, Wand2, Zap } from "lucide-react";
 import { formatarDataHora, formatarMoeda } from "@/lib/format";
 import type { Categoria, TransacaoComRelacoes } from "@/lib/types";
 import { atribuirCategoria, excluirTransacao } from "@/app/(app)/transacoes/actions";
@@ -22,12 +22,24 @@ export function TabelaTransacoes({
 }: Props) {
   const [pendente, iniciarTransicao] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   function mudarCategoria(transacaoId: string, valor: string) {
     setErro(null);
+    setAviso(null);
     iniciarTransicao(async () => {
       const r = await atribuirCategoria(transacaoId, valor || null);
-      if (r.erro) setErro(r.erro);
+      if (r.erro) {
+        setErro(r.erro);
+        return;
+      }
+      if (r.tambem && r.tambem > 0) {
+        setAviso(
+          `${r.tambem} transação${r.tambem === 1 ? "" : "ões"} com a mesma descrição ` +
+            `também foi${r.tambem === 1 ? "" : "ram"} categorizada${r.tambem === 1 ? "" : "s"}. ` +
+            "A regra vale para as próximas.",
+        );
+      }
     });
   }
 
@@ -54,6 +66,18 @@ export function TabelaTransacoes({
       {erro && (
         <p role="alert" className="mx-5 mb-3 rounded-lg bg-alerta/10 px-3 py-2 text-sm text-alerta">
           {erro}
+        </p>
+      )}
+
+      {aviso && (
+        <p className="mx-5 mb-3 flex items-start gap-2 rounded-lg bg-verde-400/10 px-3 py-2 text-sm text-entrada">
+          <Wand2 size={15} className="mt-0.5 shrink-0" aria-hidden />
+          <span>
+            {aviso}{" "}
+            <a href="/categorias" className="underline underline-offset-2">
+              Ver regras
+            </a>
+          </span>
         </p>
       )}
 

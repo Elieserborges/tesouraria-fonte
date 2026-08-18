@@ -40,8 +40,30 @@ export type Transacao = {
   origem: string;
   mp_payment_id: string | null;
   observacao: string | null;
+  categoria_automatica: boolean;
   criado_em: string;
 };
+
+/** Regra "descrição + tipo => categoria", aplicada automaticamente. */
+export type RegraCategoria = {
+  id: string;
+  padrao: string;
+  tipo: TipoTransacao;
+  categoria_id: string;
+  criado_em: string;
+};
+
+export type RegraComUso = RegraCategoria & {
+  categoria: Pick<Categoria, "id" | "nome" | "cor"> | null;
+  atingidas: number;
+};
+
+/** Normaliza a descrição do jeito que o banco compara nas regras. */
+export function normalizarPadrao(descricao: string | null | undefined): string {
+  return (descricao ?? "").trim().toLowerCase();
+}
+
+export const ROTULO_SEM_DESCRICAO = "(sem descrição)";
 
 /** Transação já com conta e categoria embutidas (join do Supabase). */
 export type TransacaoComRelacoes = Transacao & {

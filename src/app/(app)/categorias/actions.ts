@@ -48,6 +48,39 @@ export async function criarCategoria(
   return { sucesso: "Categoria criada." };
 }
 
+/**
+ * Remove uma regra de categorização automática.
+ * Com `limpar`, tira também a categoria das transações que a regra aplicou —
+ * as classificadas à mão permanecem intactas.
+ */
+export async function removerRegra(
+  regraId: string,
+  limpar = true,
+): Promise<EstadoCategoria & { limpas?: number }> {
+  let limpas = 0;
+  try {
+    const { supabase } = await sessaoEditor();
+    const { data, error } = await supabase.rpc("remover_regra_categoria", {
+      regra_id: regraId,
+      limpar,
+    });
+    if (error) return { erro: error.message };
+    limpas = Number(data ?? 0);
+  } catch (e) {
+    return { erro: e instanceof Error ? e.message : "Falha ao remover a regra." };
+  }
+
+  revalidatePath("/categorias");
+  revalidatePath("/transacoes");
+  revalidatePath("/dashboard");
+  return {
+    sucesso: limpar
+      ? `Regra removida. ${limpas} transação(ões) voltaram a ficar sem categoria.`
+      : "Regra removida. As transações mantiveram a categoria.",
+    limpas,
+  };
+}
+
 /** Remove a categoria. As transações ligadas a ela ficam "sem categoria". */
 export async function excluirCategoria(id: string): Promise<EstadoCategoria> {
   try {

@@ -150,6 +150,93 @@ create trigger transacoes_touch
   before update on public.transacoes
   for each row execute function public.touch_atualizado_em();
 
+-- Marca se a categoria veio de uma regra automática. Permite desfazer uma
+-- regra sem apagar as classificações feitas à mão.
+alter table public.transacoes
+  add column if not exists categoria_automatica boolean not null default false;
+
+-- -------------------------------------------------------------
+-- Regras de categorização automática
+--
+-- Ao categorizar uma transação, o sistema guarda a regra
+-- "descrição X + tipo Y => categoria Z" e aplica às demais.
+-- O padrão é guardado normalizado (minúsculas, sem espaços nas pontas);
+-- transação sem descrição vira padrão vazio.
+-- -------------------------------------------------------------
+create table if not exists public.regras_categoria (
+  id            uuid primary key default gen_random_uuid(),
+  padrao        text not null,
+  tipo          public.tipo_transacao not null,
+  categoria_id  uuid not null references public.categorias (id) on delete cascade,
+  criado_por    uuid references auth.users (id) on delete set null,
+  criado_em     timestamptz not null default now(),
+  unique (padrao, tipo)
+);
+
+create index if not exists transacoes_descricao_norm_idx
+  on public.transacoes (lower(btrim(coalesce(descricao, ''))));
+
+/*
+ * Preenche a categoria das transações que casam com alguma regra.
+ * Só toca em transação SEM categoria — nunca sobrescreve escolha manual.
+ * Devolve quantas foram classificadas.
+ */
+create or replace function public.aplicar_regras_categoria()
+returns integer
+language plpgsql
+as $$
+declare
+  afetadas integer;
+begin
+  update public.transacoes t
+     set categoria_id = r.categoria_id,
+         categoria_automatica = true
+    from public.regras_categoria r
+   where t.categoria_id is null
+     and t.tipo = r.tipo
+     and lower(btrim(coalesce(t.descricao, ''))) = r.padrao;
+
+  get diagnostics afetadas = row_count;
+  return afetadas;
+end;
+$$;
+
+/*
+ * Remove uma regra e, opcionalmente, limpa as categorias que ela aplicou.
+ * As classificações feitas à mão (categoria_automatica = false) permanecem.
+ */
+create or replace function public.remover_regra_categoria(
+  regra_id uuid,
+  limpar boolean default true
+)
+returns integer
+language plpgsql
+as $$
+declare
+  regra public.regras_categoria%rowtype;
+  afetadas integer := 0;
+begin
+  select * into regra from public.regras_categoria where id = regra_id;
+  if not found then
+    return 0;
+  end if;
+
+  if limpar then
+    update public.transacoes t
+       set categoria_id = null,
+           categoria_automatica = false
+     where t.categoria_automatica
+       and t.categoria_id = regra.categoria_id
+       and t.tipo = regra.tipo
+       and lower(btrim(coalesce(t.descricao, ''))) = regra.padrao;
+    get diagnostics afetadas = row_count;
+  end if;
+
+  delete from public.regras_categoria where id = regra_id;
+  return afetadas;
+end;
+$$;
+
 -- -------------------------------------------------------------
 -- Log de webhooks (auditoria + idempotência)
 -- -------------------------------------------------------------
@@ -170,11 +257,12 @@ create index if not exists webhook_eventos_recurso_idx on public.webhook_eventos
 -- =============================================================
 -- Row Level Security
 -- =============================================================
-alter table public.perfis           enable row level security;
-alter table public.contas           enable row level security;
-alter table public.categorias       enable row level security;
-alter table public.transacoes       enable row level security;
-alter table public.webhook_eventos  enable row level security;
+alter table public.perfis            enable row level security;
+alter table public.contas            enable row level security;
+alter table public.categorias        enable row level security;
+alter table public.transacoes        enable row level security;
+alter table public.webhook_eventos   enable row level security;
+alter table public.regras_categoria  enable row level security;
 
 -- perfis: cada um lê o próprio; admin lê todos
 drop policy if exists "perfis: leitura" on public.perfis;
@@ -192,7 +280,7 @@ create policy "perfis: admin edita" on public.perfis
 do $$
 declare t text;
 begin
-  foreach t in array array['contas', 'categorias', 'transacoes'] loop
+  foreach t in array array['contas', 'categorias', 'transacoes', 'regras_categoria'] loop
     execute format('drop policy if exists "%s: leitura" on public.%I', t, t);
     execute format(
       'create policy "%s: leitura" on public.%I for select to authenticated using (true)', t, t);

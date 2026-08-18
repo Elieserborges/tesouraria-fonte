@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { obterSessao } from "@/lib/supabase/server";
-import { podeEditar } from "@/lib/types";
+import { normalizarPadrao, podeEditar } from "@/lib/types";
 
 export type EstadoFormulario = { erro?: string; sucesso?: string };
+
+/** Resultado de categorizar: quantas outras transações foram junto. */
+export type ResultadoCategoria = EstadoFormulario & { tambem?: number };
 
 async function sessaoEditor() {
   const sessao = await obterSessao();
@@ -15,26 +18,66 @@ async function sessaoEditor() {
   return sessao;
 }
 
-/** Atribui (ou remove) a categoria de uma transação. */
+/**
+ * Atribui (ou remove) a categoria de uma transação.
+ *
+ * Ao definir uma categoria, guarda a regra "descrição + tipo => categoria"
+ * e aplica às demais transações iguais que ainda estão sem categoria.
+ * Nunca sobrescreve uma classificação feita à mão.
+ */
 export async function atribuirCategoria(
   transacaoId: string,
   categoriaId: string | null,
-): Promise<EstadoFormulario> {
+  criarRegra = true,
+): Promise<ResultadoCategoria> {
+  let tambem = 0;
+
   try {
-    const { supabase } = await sessaoEditor();
+    const { supabase, user } = await sessaoEditor();
+
+    const { data: transacao, error: erroBusca } = await supabase
+      .from("transacoes")
+      .select("id, tipo, descricao")
+      .eq("id", transacaoId)
+      .single();
+
+    if (erroBusca || !transacao) return { erro: "Transação não encontrada." };
+
+    // A escolha desta linha é sempre manual — não pode ser desfeita por regra.
     const { error } = await supabase
       .from("transacoes")
-      .update({ categoria_id: categoriaId })
+      .update({ categoria_id: categoriaId, categoria_automatica: false })
       .eq("id", transacaoId);
 
     if (error) return { erro: error.message };
+
+    if (categoriaId && criarRegra) {
+      const padrao = normalizarPadrao(transacao.descricao);
+
+      const { error: erroRegra } = await supabase
+        .from("regras_categoria")
+        .upsert(
+          { padrao, tipo: transacao.tipo, categoria_id: categoriaId, criado_por: user.id },
+          { onConflict: "padrao,tipo" },
+        );
+
+      if (erroRegra) return { erro: erroRegra.message };
+
+      const { data: aplicadas, error: erroAplicar } = await supabase.rpc(
+        "aplicar_regras_categoria",
+      );
+
+      if (erroAplicar) return { erro: erroAplicar.message };
+      tambem = Number(aplicadas ?? 0);
+    }
   } catch (e) {
     return { erro: e instanceof Error ? e.message : "Falha ao categorizar." };
   }
 
   revalidatePath("/transacoes");
   revalidatePath("/dashboard");
-  return { sucesso: "Categoria atualizada." };
+  revalidatePath("/categorias");
+  return { sucesso: "Categoria atualizada.", tambem };
 }
 
 /** Lançamento manual (saídas em dinheiro, ajustes, saldo inicial). */

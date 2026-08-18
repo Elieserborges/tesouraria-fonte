@@ -2,12 +2,13 @@ import { criarClienteServidor } from "@/lib/supabase/server";
 import type {
   Categoria,
   Conta,
+  RegraComUso,
   TipoTransacao,
   TransacaoComRelacoes,
 } from "@/lib/types";
 
 const SELECT_TRANSACAO =
-  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor)";
+  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor)";
 
 export type SaldoConta = {
   conta_id: string;
@@ -94,6 +95,36 @@ export async function listarTransacoes(
     ...t,
     valor: Number(t.valor),
   }));
+}
+
+/** Regras de categorização, com quantas transações cada uma alcança hoje. */
+export async function listarRegras(): Promise<RegraComUso[]> {
+  const supabase = await criarClienteServidor();
+
+  const { data: regras } = await supabase
+    .from("regras_categoria")
+    .select("id, padrao, tipo, categoria_id, criado_em, categoria:categorias(id, nome, cor)")
+    .order("criado_em", { ascending: false });
+
+  if (!regras?.length) return [];
+
+  // Conta as transações que casam com o padrão da regra (não as da categoria
+  // inteira). São poucas regras, então uma consulta por regra é aceitável.
+  return Promise.all(
+    (regras as unknown as RegraComUso[]).map(async (r) => {
+      let consulta = supabase
+        .from("transacoes")
+        .select("id", { count: "exact", head: true })
+        .eq("tipo", r.tipo);
+
+      consulta = r.padrao
+        ? consulta.ilike("descricao", r.padrao) // ilike sem curinga = igualdade sem caixa
+        : consulta.or("descricao.is.null,descricao.eq.");
+
+      const { count } = await consulta;
+      return { ...r, atingidas: count ?? 0 };
+    }),
+  );
 }
 
 export async function contarSemCategoria(): Promise<number> {

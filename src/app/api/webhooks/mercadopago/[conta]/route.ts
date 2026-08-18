@@ -153,4 +153,13 @@ async function salvarTransacao(
     .upsert(registro, { onConflict: "mp_payment_id" });
 
   if (error) throw new Error(`Falha ao gravar a transação: ${error.message}`);
+
+  // Classifica pela regra da descrição, se houver. Só preenche o que está
+  // vazio, então nunca desfaz uma categorização manual.
+  const { error: erroRegras } = await admin.rpc("aplicar_regras_categoria");
+  if (erroRegras) {
+    // Não é motivo para devolver erro ao Mercado Pago: a transação já foi
+    // gravada, e ela apenas fica sem categoria até alguém classificar.
+    console.error("Falha ao aplicar regras de categoria:", erroRegras.message);
+  }
 }

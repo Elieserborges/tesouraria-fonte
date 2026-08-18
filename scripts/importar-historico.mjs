@@ -330,6 +330,13 @@ if (SIMULAR) {
     }
   }
 
+  // Classifica o que casar com as regras já cadastradas.
+  const { data: classificadas, error: erroRegras } = await admin.rpc(
+    "aplicar_regras_categoria",
+  );
+  if (erroRegras) console.warn(`! Regras não aplicadas: ${erroRegras.message}`);
+  else if (classificadas) console.log(`${classificadas} classificada(s) por regra.`);
+
   const { data: saldo } = await admin.from("saldo_por_conta").select("*");
   const { count: semCategoria } = await admin
     .from("transacoes")

@@ -3,7 +3,8 @@ import {
   GerenciadorCategorias,
   type CategoriaComUso,
 } from "@/components/categorias/gerenciador-categorias";
-import { listarCategorias, listarTransacoes } from "@/lib/dados";
+import { ListaRegras } from "@/components/categorias/lista-regras";
+import { listarCategorias, listarRegras, listarTransacoes } from "@/lib/dados";
 import { obterSessao } from "@/lib/supabase/server";
 import { podeEditar } from "@/lib/types";
 
@@ -17,9 +18,10 @@ export default async function PaginaCategorias() {
   const hoje = new Date();
   const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
 
-  const [categorias, transacoes] = await Promise.all([
+  const [categorias, transacoes, regras] = await Promise.all([
     listarCategorias(),
     listarTransacoes({ inicio, limite: 5000 }),
+    listarRegras(),
   ]);
 
   const uso = new Map<string, { usos: number; total: number }>();
@@ -50,6 +52,8 @@ export default async function PaginaCategorias() {
       </header>
 
       <GerenciadorCategorias categorias={comUso} editavel={editavel} />
+
+      <ListaRegras regras={regras} editavel={editavel} />
     </div>
   );
 }
