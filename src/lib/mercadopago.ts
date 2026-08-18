@@ -98,6 +98,65 @@ export async function buscarPagamento(
   return (await resposta.json()) as PagamentoMP;
 }
 
+/**
+ * Pagamentos criados numa janela de tempo.
+ *
+ * Existe porque o webhook só notifica pagamentos que passam pela aplicação —
+ * um Pix feito direto para a chave da conta nunca gera notificação. Esta
+ * busca enxerga todos.
+ *
+ * A API devolve respostas divergentes para consultas idênticas (réplicas
+ * fora de sincronia), então repetimos e unimos até parar de surgir id novo.
+ */
+export async function buscarPagamentosNaJanela(
+  accessToken: string,
+  de: Date,
+  ate: Date,
+  tentativas = 3,
+): Promise<PagamentoMP[]> {
+  const vistos = new Map<string, PagamentoMP>();
+
+  for (let i = 0; i < tentativas; i++) {
+    const params = new URLSearchParams({
+      sort: "date_created",
+      criteria: "desc",
+      range: "date_created",
+      begin_date: de.toISOString(),
+      end_date: ate.toISOString(),
+      limit: "50",
+      offset: "0",
+    });
+
+    const resposta = await fetch(
+      `https://api.mercadopago.com/v1/payments/search?${params}`,
+      { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" },
+    );
+
+    if (!resposta.ok) {
+      const corpo = await resposta.text();
+      throw new Error(
+        `Mercado Pago respondeu ${resposta.status} na busca: ${corpo.slice(0, 200)}`,
+      );
+    }
+
+    const { results = [] } = (await resposta.json()) as { results?: PagamentoMP[] };
+
+    let novos = 0;
+    for (const p of results) {
+      const id = String(p.id);
+      if (!vistos.has(id)) {
+        vistos.set(id, p);
+        novos += 1;
+      }
+    }
+
+    // Nada novo nesta rodada: as réplicas já convergiram.
+    if (i > 0 && novos === 0) break;
+  }
+
+  return [...vistos.values()];
+}
+
 /** Nome legível de quem pagou. */
 export function nomeContraparte(pagamento: PagamentoMP): string | null {
   const p = pagamento.payer;
