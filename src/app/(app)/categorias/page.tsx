@@ -8,7 +8,7 @@ import { listarCategorias, listarRegras, listarTransacoes } from "@/lib/dados";
 import { obterSessao } from "@/lib/supabase/server";
 import { podeEditar } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Categorias · Tesouraria Fonte" };
+export const metadata: Metadata = { title: "Categorias · Fluxx Finance" };
 
 export default async function PaginaCategorias() {
   const sessao = await obterSessao();

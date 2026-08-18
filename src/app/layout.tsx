@@ -6,8 +6,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Tesouraria Fonte",
-  description: "Painel financeiro da tesouraria — entradas, saídas e relatórios.",
+  title: "Fluxx Finance",
+  description: "Controle financeiro — entradas, saídas, categorias e relatórios.",
 };
 
 // Aplica o tema salvo antes da primeira pintura, evitando o "flash" branco.

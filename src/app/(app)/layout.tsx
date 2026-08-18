@@ -39,7 +39,7 @@ export default async function LayoutApp({
             <p className="text-xs text-texto-suave">{PAPEL_LABEL[papel]}</p>
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <AlternarTema />
+            <AlternarTema comRotulo />
             <form action={sair} className="flex-1">
               <button
                 type="submit"

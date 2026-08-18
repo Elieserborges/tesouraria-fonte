@@ -5,7 +5,7 @@ import { obterSessao } from "@/lib/supabase/server";
 import { ehAdmin } from "@/lib/types";
 import { listarUsuarios } from "./actions";
 
-export const metadata: Metadata = { title: "Usuários · Tesouraria Fonte" };
+export const metadata: Metadata = { title: "Usuários · Fluxx Finance" };
 
 export default async function PaginaUsuarios() {
   const sessao = await obterSessao();

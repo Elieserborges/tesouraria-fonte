@@ -14,7 +14,7 @@ import { formatarMes, formatarMoeda } from "@/lib/format";
 import { obterSessao } from "@/lib/supabase/server";
 import { podeEditar, type TipoTransacao } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Transações · Tesouraria Fonte" };
+export const metadata: Metadata = { title: "Transações · Fluxx Finance" };
 
 function mesAtual() {
   const hoje = new Date();

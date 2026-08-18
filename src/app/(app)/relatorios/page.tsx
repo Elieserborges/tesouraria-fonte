@@ -10,7 +10,7 @@ import { SeletorMes } from "@/components/dashboard/seletor-mes";
 import { listarTransacoes, resumoPorCategoria } from "@/lib/dados";
 import { formatarMes, formatarMoeda } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Relatórios · Tesouraria Fonte" };
+export const metadata: Metadata = { title: "Relatórios · Fluxx Finance" };
 
 function mesAtual() {
   const hoje = new Date();

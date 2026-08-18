@@ -19,7 +19,7 @@ import { formatarMes, formatarMoeda } from "@/lib/format";
 import { obterSessao } from "@/lib/supabase/server";
 import { podeEditar } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Visão geral · Tesouraria Fonte" };
+export const metadata: Metadata = { title: "Visão geral · Fluxx Finance" };
 
 /** "2026-08" -> [1º de agosto, 1º de setembro) no fuso local. */
 function intervaloDoMes(mes: string) {
