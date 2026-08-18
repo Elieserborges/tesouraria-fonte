@@ -46,14 +46,38 @@ export type Transacao = {
   criado_em: string;
 };
 
+export type ModoRegra = "exata" | "contem";
+
 /** Regra "descrição + tipo => categoria", aplicada automaticamente. */
 export type RegraCategoria = {
   id: string;
   padrao: string;
+  modo: ModoRegra;
   tipo: TipoTransacao;
   categoria_id: string;
   criado_em: string;
 };
+
+/**
+ * Escolhe o padrão de uma regra a partir da descrição.
+ *
+ * Muitas descrições trazem o nome da pessoa no fim — "Inscrição Café com
+ * Dança - Isabela Machado". Casar o texto inteiro criaria uma regra por
+ * comprador e não automatizaria nada. Quando há um separador, usamos só a
+ * parte da frente e casamos por trecho.
+ */
+export function padraoDaDescricao(descricao: string | null | undefined): {
+  padrao: string;
+  modo: ModoRegra;
+} {
+  const completo = normalizarPadrao(descricao);
+  const separador = completo.match(/^(.{6,}?)\s+[-–—:]\s+\S/);
+
+  if (separador) {
+    return { padrao: separador[1].trim(), modo: "contem" };
+  }
+  return { padrao: completo, modo: "exata" };
+}
 
 export type RegraComUso = RegraCategoria & {
   categoria: Pick<Categoria, "id" | "nome" | "cor"> | null;

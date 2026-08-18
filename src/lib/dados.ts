@@ -104,7 +104,7 @@ export async function listarRegras(): Promise<RegraComUso[]> {
 
   const { data: regras } = await supabase
     .from("regras_categoria")
-    .select("id, padrao, tipo, categoria_id, criado_em, categoria:categorias(id, nome, cor, eh_transferencia)")
+    .select("id, padrao, modo, tipo, categoria_id, criado_em, categoria:categorias(id, nome, cor, eh_transferencia)")
     .order("criado_em", { ascending: false });
 
   if (!regras?.length) return [];
@@ -118,9 +118,14 @@ export async function listarRegras(): Promise<RegraComUso[]> {
         .select("id", { count: "exact", head: true })
         .eq("tipo", r.tipo);
 
-      consulta = r.padrao
-        ? consulta.ilike("descricao", r.padrao) // ilike sem curinga = igualdade sem caixa
-        : consulta.or("descricao.is.null,descricao.eq.");
+      if (!r.padrao) {
+        consulta = consulta.or("descricao.is.null,descricao.eq.");
+      } else if (r.modo === "contem") {
+        consulta = consulta.ilike("descricao", `%${r.padrao}%`);
+      } else {
+        // ilike sem curinga = igualdade sem diferenciar maiúsculas
+        consulta = consulta.ilike("descricao", r.padrao);
+      }
 
       const { count } = await consulta;
       return { ...r, atingidas: count ?? 0 };

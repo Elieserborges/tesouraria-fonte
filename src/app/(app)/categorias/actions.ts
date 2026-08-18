@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obterSessao } from "@/lib/supabase/server";
-import { podeEditar } from "@/lib/types";
+import { podeEditar, type ModoRegra } from "@/lib/types";
 
 export type EstadoCategoria = { erro?: string; sucesso?: string };
 
@@ -49,6 +49,56 @@ export async function criarCategoria(
   revalidatePath("/categorias");
   revalidatePath("/transacoes");
   return { sucesso: "Categoria criada." };
+}
+
+/**
+ * Ajusta o padrão de uma regra e reaplica.
+ * Encurtar o padrão e usar o modo "contém" é o que faz uma regra pegar
+ * descrições que variam no fim, como o nome de quem comprou.
+ */
+export async function atualizarRegra(
+  regraId: string,
+  padrao: string,
+  modo: ModoRegra,
+): Promise<EstadoCategoria & { aplicadas?: number }> {
+  let aplicadas = 0;
+  try {
+    const { supabase } = await sessaoEditor();
+
+    const limpo = padrao.trim().toLowerCase();
+    if (modo === "contem" && limpo.length < 3) {
+      return { erro: "Para casar por trecho, use ao menos 3 caracteres." };
+    }
+
+    const { error } = await supabase
+      .from("regras_categoria")
+      .update({ padrao: limpo, modo })
+      .eq("id", regraId);
+
+    if (error) {
+      return {
+        erro: error.code === "23505"
+          ? "Já existe uma regra com esse padrão."
+          : error.message,
+      };
+    }
+
+    const { data, error: erroAplicar } = await supabase.rpc("aplicar_regras_categoria");
+    if (erroAplicar) return { erro: erroAplicar.message };
+    aplicadas = Number(data ?? 0);
+  } catch (e) {
+    return { erro: e instanceof Error ? e.message : "Falha ao atualizar a regra." };
+  }
+
+  revalidatePath("/categorias");
+  revalidatePath("/transacoes");
+  revalidatePath("/dashboard");
+  return {
+    sucesso: aplicadas
+      ? `Regra atualizada. ${aplicadas} transação(ões) categorizadas.`
+      : "Regra atualizada. Nenhuma transação nova foi alcançada.",
+    aplicadas,
+  };
 }
 
 /**

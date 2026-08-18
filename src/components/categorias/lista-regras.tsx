@@ -1,9 +1,94 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, Wand2 } from "lucide-react";
-import { removerRegra } from "@/app/(app)/categorias/actions";
-import { ROTULO_SEM_DESCRICAO, type RegraComUso } from "@/lib/types";
+import { Check, Pencil, Trash2, Wand2, X } from "lucide-react";
+import { atualizarRegra, removerRegra } from "@/app/(app)/categorias/actions";
+import {
+  ROTULO_SEM_DESCRICAO,
+  type ModoRegra,
+  type RegraComUso,
+} from "@/lib/types";
+
+function Editor({
+  regra,
+  aoFechar,
+  aoResultado,
+}: {
+  regra: RegraComUso;
+  aoFechar: () => void;
+  aoResultado: (msg: string | null, erro: string | null) => void;
+}) {
+  const [padrao, setPadrao] = useState(regra.padrao);
+  const [modo, setModo] = useState<ModoRegra>(regra.modo);
+  const [pendente, iniciar] = useTransition();
+
+  function salvar() {
+    iniciar(async () => {
+      const r = await atualizarRegra(regra.id, padrao, modo);
+      if (r.erro) aoResultado(null, r.erro);
+      else {
+        aoResultado(r.sucesso ?? null, null);
+        aoFechar();
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-3 bg-superficie-2/60 px-5 py-4">
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium text-texto">Texto da regra</span>
+        <input
+          value={padrao}
+          onChange={(e) => setPadrao(e.target.value)}
+          className="w-full rounded-xl border border-borda bg-superficie px-3 py-2 text-sm text-texto outline-none focus:border-primaria focus:ring-2 focus:ring-primaria/25"
+        />
+      </label>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-texto">Como comparar</legend>
+        {(
+          [
+            ["contem", "Contém este texto", "Pega descrições que variam no fim, como o nome de quem comprou."],
+            ["exata", "Descrição idêntica", "Só casa quando a descrição é exatamente este texto."],
+          ] as const
+        ).map(([valor, titulo, ajuda]) => (
+          <label key={valor} className="flex cursor-pointer items-start gap-2.5 text-sm">
+            <input
+              type="radio"
+              name={`modo-${regra.id}`}
+              checked={modo === valor}
+              onChange={() => setModo(valor)}
+              className="mt-1 size-4 accent-[var(--primaria)]"
+            />
+            <span>
+              <span className="block text-texto">{titulo}</span>
+              <span className="block text-xs text-texto-suave">{ajuda}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={salvar}
+          disabled={pendente}
+          className="flex items-center gap-1.5 rounded-xl bg-primaria px-3 py-2 text-sm font-semibold text-primaria-contraste transition hover:opacity-90 disabled:opacity-60"
+        >
+          <Check size={15} aria-hidden />
+          {pendente ? "Aplicando…" : "Salvar e aplicar"}
+        </button>
+        <button
+          type="button"
+          onClick={aoFechar}
+          className="rounded-xl px-3 py-2 text-sm text-texto-suave transition hover:text-texto"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ListaRegras({
   regras,
@@ -14,6 +99,7 @@ export function ListaRegras({
 }) {
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [editando, setEditando] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
 
   function remover(regra: RegraComUso) {
@@ -23,7 +109,6 @@ export function ListaRegras({
         `OK = remover a regra E tirar a categoria das ${regra.atingidas} transações que ela classificou.\n` +
         "Cancelar = manter as transações como estão (aparecerá outra pergunta).",
     );
-
     if (!limpar && !confirm("Remover a regra mantendo as transações categorizadas?")) {
       return;
     }
@@ -45,8 +130,9 @@ export function ListaRegras({
           Regras automáticas
         </h2>
         <p className="mt-1 text-xs text-texto-suave">
-          Criadas quando você categoriza uma transação. Valem para as iguais que
-          ainda não têm categoria e para as que chegarem no futuro.
+          Criadas quando você categoriza uma transação. Se a regra pegou poucas
+          transações, encurte o texto — ex.: deixe só{" "}
+          <em>inscrição café com dança</em> para valer para todos os inscritos.
         </p>
       </header>
 
@@ -68,54 +154,73 @@ export function ListaRegras({
       ) : (
         <ul className={pendente ? "opacity-60" : undefined}>
           {regras.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-center gap-3 border-b border-borda/60 px-5 py-3 last:border-0"
-            >
-              <span
-                aria-hidden
-                className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                  r.tipo === "entrada"
-                    ? "bg-verde-400/15 text-entrada"
-                    : "bg-alerta/12 text-saida"
-                }`}
-                title={r.tipo === "entrada" ? "Entradas" : "Saídas"}
-              >
-                {r.tipo === "entrada" ? "↓" : "↑"}
-              </span>
-
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-texto">
-                  {r.padrao || (
-                    <em className="text-texto-suave">{ROTULO_SEM_DESCRICAO}</em>
-                  )}
-                </span>
-                <span className="text-xs text-texto-suave">
-                  {r.atingidas} transação{r.atingidas === 1 ? "" : "ões"}
-                </span>
-              </span>
-
-              {r.categoria && (
+            <li key={r.id} className="border-b border-borda/60 last:border-0">
+              <div className="flex items-center gap-3 px-5 py-3">
                 <span
-                  className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
-                  style={{
-                    backgroundColor: `${r.categoria.cor}1f`,
-                    color: r.categoria.cor,
-                  }}
+                  aria-hidden
+                  className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                    r.tipo === "entrada"
+                      ? "bg-verde-400/15 text-entrada"
+                      : "bg-alerta/12 text-saida"
+                  }`}
+                  title={r.tipo === "entrada" ? "Entradas" : "Saídas"}
                 >
-                  {r.categoria.nome}
+                  {r.tipo === "entrada" ? "↓" : "↑"}
                 </span>
-              )}
 
-              {editavel && (
-                <button
-                  type="button"
-                  onClick={() => remover(r)}
-                  aria-label={`Remover regra de ${r.padrao || ROTULO_SEM_DESCRICAO}`}
-                  className="rounded-lg p-1.5 text-texto-suave transition hover:bg-alerta/10 hover:text-alerta"
-                >
-                  <Trash2 size={15} />
-                </button>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-texto">
+                    {r.padrao || <em className="text-texto-suave">{ROTULO_SEM_DESCRICAO}</em>}
+                  </span>
+                  <span className="text-xs text-texto-suave">
+                    {r.modo === "contem" ? "contém" : "idêntica"} · {r.atingidas}{" "}
+                    transação{r.atingidas === 1 ? "" : "ões"}
+                  </span>
+                </span>
+
+                {r.categoria && (
+                  <span
+                    className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
+                    style={{
+                      backgroundColor: `${r.categoria.cor}1f`,
+                      color: r.categoria.cor,
+                    }}
+                  >
+                    {r.categoria.nome}
+                  </span>
+                )}
+
+                {editavel && (
+                  <span className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditando(editando === r.id ? null : r.id)}
+                      aria-label={`Editar regra de ${r.padrao || ROTULO_SEM_DESCRICAO}`}
+                      className="rounded-lg p-1.5 text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+                    >
+                      {editando === r.id ? <X size={15} /> : <Pencil size={15} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remover(r)}
+                      aria-label={`Remover regra de ${r.padrao || ROTULO_SEM_DESCRICAO}`}
+                      className="rounded-lg p-1.5 text-texto-suave transition hover:bg-alerta/10 hover:text-alerta"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </span>
+                )}
+              </div>
+
+              {editando === r.id && (
+                <Editor
+                  regra={r}
+                  aoFechar={() => setEditando(null)}
+                  aoResultado={(msg, err) => {
+                    setMensagem(msg);
+                    setErro(err);
+                  }}
+                />
               )}
             </li>
           ))}

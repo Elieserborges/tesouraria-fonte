@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obterSessao } from "@/lib/supabase/server";
-import { normalizarPadrao, podeEditar } from "@/lib/types";
+import { padraoDaDescricao, podeEditar } from "@/lib/types";
 
 export type EstadoFormulario = { erro?: string; sucesso?: string };
 
@@ -52,13 +52,19 @@ export async function atribuirCategoria(
     if (error) return { erro: error.message };
 
     if (categoriaId && criarRegra) {
-      const padrao = normalizarPadrao(transacao.descricao);
+      const { padrao, modo } = padraoDaDescricao(transacao.descricao);
 
       const { error: erroRegra } = await supabase
         .from("regras_categoria")
         .upsert(
-          { padrao, tipo: transacao.tipo, categoria_id: categoriaId, criado_por: user.id },
-          { onConflict: "padrao,tipo" },
+          {
+            padrao,
+            modo,
+            tipo: transacao.tipo,
+            categoria_id: categoriaId,
+            criado_por: user.id,
+          },
+          { onConflict: "padrao,tipo,modo" },
         );
 
       if (erroRegra) return { erro: erroRegra.message };

@@ -179,9 +179,27 @@ create table if not exists public.regras_categoria (
   tipo          public.tipo_transacao not null,
   categoria_id  uuid not null references public.categorias (id) on delete cascade,
   criado_por    uuid references auth.users (id) on delete set null,
-  criado_em     timestamptz not null default now(),
-  unique (padrao, tipo)
+  criado_em     timestamptz not null default now()
 );
+
+/*
+ * 'exata'  = a descrição inteira é igual ao padrão.
+ * 'contem' = o padrão aparece em qualquer parte da descrição.
+ *
+ * O modo 'contem' existe porque muitas descrições carregam o nome da pessoa
+ * no fim ("Inscrição Café com Dança - Isabela Machado"). Sem ele, cada compra
+ * viraria uma regra separada e nada seria automatizado.
+ */
+alter table public.regras_categoria
+  add column if not exists modo text not null default 'exata';
+
+alter table public.regras_categoria drop constraint if exists regras_categoria_modo_check;
+alter table public.regras_categoria
+  add constraint regras_categoria_modo_check check (modo in ('exata', 'contem'));
+
+alter table public.regras_categoria drop constraint if exists regras_categoria_padrao_tipo_key;
+create unique index if not exists regras_categoria_unica
+  on public.regras_categoria (padrao, tipo, modo);
 
 create index if not exists transacoes_descricao_norm_idx
   on public.transacoes (lower(btrim(coalesce(descricao, ''))));
@@ -204,7 +222,11 @@ begin
     from public.regras_categoria r
    where t.categoria_id is null
      and t.tipo = r.tipo
-     and lower(btrim(coalesce(t.descricao, ''))) = r.padrao;
+     and (
+       (r.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = r.padrao)
+       or (r.modo = 'contem' and r.padrao <> ''
+           and lower(btrim(coalesce(t.descricao, ''))) like '%' || r.padrao || '%')
+     );
 
   get diagnostics afetadas = row_count;
   return afetadas;
@@ -238,7 +260,11 @@ begin
      where t.categoria_automatica
        and t.categoria_id = regra.categoria_id
        and t.tipo = regra.tipo
-       and lower(btrim(coalesce(t.descricao, ''))) = regra.padrao;
+       and (
+         (regra.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = regra.padrao)
+         or (regra.modo = 'contem' and regra.padrao <> ''
+             and lower(btrim(coalesce(t.descricao, ''))) like '%' || regra.padrao || '%')
+       );
     get diagnostics afetadas = row_count;
   end if;
 
