@@ -25,13 +25,16 @@ export async function criarCategoria(
     const nome = String(formData.get("nome") ?? "").trim();
     const tipo = String(formData.get("tipo") ?? "");
     const cor = String(formData.get("cor") ?? "#20A979");
+    const ehTransferencia = formData.get("eh_transferencia") === "1";
 
     if (!nome) return { erro: "Informe o nome da categoria." };
     if (tipo !== "entrada" && tipo !== "saida") {
       return { erro: "Selecione se é categoria de entrada ou de saída." };
     }
 
-    const { error } = await supabase.from("categorias").insert({ nome, tipo, cor });
+    const { error } = await supabase
+      .from("categorias")
+      .insert({ nome, tipo, cor, eh_transferencia: ehTransferencia });
     if (error) {
       return {
         erro: error.code === "23505"

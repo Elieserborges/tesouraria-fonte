@@ -109,6 +109,16 @@ create table if not exists public.categorias (
   unique (nome, tipo)
 );
 
+/*
+ * Transferência entre contas da própria igreja (ex.: Mercado Pago -> Sicredi)
+ * não é receita nem despesa: é o mesmo dinheiro mudando de lugar. Categorias
+ * marcadas assim afetam o SALDO de cada conta, mas ficam fora dos totais de
+ * entradas/saídas e do gráfico de despesas — senão o mesmo valor apareceria
+ * como despesa numa conta e receita na outra.
+ */
+alter table public.categorias
+  add column if not exists eh_transferencia boolean not null default false;
+
 -- -------------------------------------------------------------
 -- Transações
 -- -------------------------------------------------------------
@@ -339,5 +349,12 @@ insert into public.categorias (nome, tipo, cor) values
   ('Missões',            'saida',   '#0EA5E9'),
   ('Salários e encargos','saida',   '#EC4899'),
   ('Materiais',          'saida',   '#14B8A6'),
+  ('Tarifas bancárias',  'saida',   '#64748B'),
   ('Outras saídas',      'saida',   '#94A3B8')
 on conflict (nome, tipo) do nothing;
+
+-- Transferências entre contas próprias: mexem no saldo, não no resultado.
+insert into public.categorias (nome, tipo, cor, eh_transferencia) values
+  ('Transferência entre contas', 'saida',   '#7C8DB5', true),
+  ('Transferência entre contas', 'entrada', '#7C8DB5', true)
+on conflict (nome, tipo) do update set eh_transferencia = true;

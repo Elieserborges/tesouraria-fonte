@@ -24,6 +24,8 @@ export type Categoria = {
   nome: string;
   tipo: TipoTransacao;
   cor: string;
+  /** Transferência entre contas da igreja: entra no saldo, fica fora do resultado. */
+  eh_transferencia: boolean;
 };
 
 export type Transacao = {
@@ -68,8 +70,13 @@ export const ROTULO_SEM_DESCRICAO = "(sem descrição)";
 /** Transação já com conta e categoria embutidas (join do Supabase). */
 export type TransacaoComRelacoes = Transacao & {
   conta: Pick<Conta, "id" | "nome" | "cor"> | null;
-  categoria: Pick<Categoria, "id" | "nome" | "cor"> | null;
+  categoria: Pick<Categoria, "id" | "nome" | "cor" | "eh_transferencia"> | null;
 };
+
+/** Movimento que só troca dinheiro de conta — não é receita nem despesa. */
+export function ehTransferencia(t: TransacaoComRelacoes): boolean {
+  return t.categoria?.eh_transferencia === true;
+}
 
 export const PAPEL_LABEL: Record<PapelUsuario, string> = {
   admin: "Administrador",

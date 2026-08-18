@@ -110,6 +110,26 @@ export function GerenciadorCategorias({
 
             <BotaoAdicionar />
 
+            <label className="flex w-full items-start gap-2.5 rounded-xl border border-borda bg-superficie-2 p-3 text-sm">
+              <input
+                name="eh_transferencia"
+                type="checkbox"
+                value="1"
+                className="mt-0.5 size-4 accent-[var(--primaria)]"
+              />
+              <span>
+                <span className="font-medium text-texto">
+                  É transferência entre contas da igreja
+                </span>
+                <span className="mt-0.5 block text-xs text-texto-suave">
+                  Ex.: Mercado Pago → Sicredi. Entra no saldo de cada conta, mas
+                  fica fora dos totais de entradas e saídas e do gráfico de
+                  despesas — senão o mesmo dinheiro contaria como despesa numa
+                  conta e receita na outra.
+                </span>
+              </span>
+            </label>
+
             {estado.erro && (
               <p role="alert" className="w-full rounded-lg bg-alerta/10 px-3 py-2 text-sm text-alerta">
                 {estado.erro}
@@ -151,6 +171,14 @@ export function GerenciadorCategorias({
                     />
                     <span className="min-w-0 flex-1 truncate text-sm text-texto">
                       {c.nome}
+                      {c.eh_transferencia && (
+                        <span
+                          title="Não conta como receita nem despesa"
+                          className="ml-2 rounded-full bg-superficie-2 px-2 py-0.5 text-xs font-normal text-texto-suave"
+                        >
+                          transferência
+                        </span>
+                      )}
                     </span>
                     <span className="whitespace-nowrap text-xs text-texto-suave">
                       {c.usos} lanç. · {formatarMoeda(c.total)}

@@ -13,6 +13,7 @@ import {
   listarTransacoes,
   porCategoria,
   somar,
+  somarTransferencias,
 } from "@/lib/dados";
 import { formatarMes, formatarMoeda } from "@/lib/format";
 import { obterSessao } from "@/lib/supabase/server";
@@ -60,6 +61,8 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
   const entradasAnterior = somar(doMesAnterior, "entrada");
   const saidasAnterior = somar(doMesAnterior, "saida");
   const resultado = entradas - saidas;
+  const transferido =
+    somarTransferencias(doMes, "saida") + somarTransferencias(doMes, "entrada");
 
   const fluxo = fluxoDiario(doMes, inicio, fim);
   const despesas = porCategoria(doMes, "saida");
@@ -124,9 +127,16 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           icone={<PiggyBank size={18} />}
           rodape={
             <span>
-              {resultado >= 0
-                ? "Entradas superaram as saídas no período."
-                : "As saídas superaram as entradas no período."}
+              {transferido > 0 ? (
+                <>
+                  Fora {formatarMoeda(transferido)} em transferências entre contas
+                  da igreja, que mexem no saldo mas não são receita nem despesa.
+                </>
+              ) : resultado >= 0 ? (
+                "Entradas superaram as saídas no período."
+              ) : (
+                "As saídas superaram as entradas no período."
+              )}
             </span>
           }
         />

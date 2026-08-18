@@ -1,4 +1,5 @@
 import { criarClienteServidor } from "@/lib/supabase/server";
+import { ehTransferencia } from "@/lib/types";
 import type {
   Categoria,
   Conta,
@@ -8,7 +9,7 @@ import type {
 } from "@/lib/types";
 
 const SELECT_TRANSACAO =
-  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor)";
+  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
 
 export type SaldoConta = {
   conta_id: string;
@@ -43,7 +44,7 @@ export async function listarCategorias(): Promise<Categoria[]> {
   const supabase = await criarClienteServidor();
   const { data } = await supabase
     .from("categorias")
-    .select("id, nome, tipo, cor")
+    .select("id, nome, tipo, cor, eh_transferencia")
     .order("tipo")
     .order("nome");
   return (data as Categoria[]) ?? [];
@@ -103,7 +104,7 @@ export async function listarRegras(): Promise<RegraComUso[]> {
 
   const { data: regras } = await supabase
     .from("regras_categoria")
-    .select("id, padrao, tipo, categoria_id, criado_em, categoria:categorias(id, nome, cor)")
+    .select("id, padrao, tipo, categoria_id, criado_em, categoria:categorias(id, nome, cor, eh_transferencia)")
     .order("criado_em", { ascending: false });
 
   if (!regras?.length) return [];
@@ -140,9 +141,26 @@ export async function contarSemCategoria(): Promise<number> {
 // Agregações (feitas em memória — o volume da tesouraria comporta)
 // ------------------------------------------------------------------
 
+/**
+ * Total de entradas ou saídas do período.
+ * Transferências entre contas da igreja ficam de fora: elas mexem no saldo
+ * de cada conta, mas não são receita nem despesa.
+ */
 export function somar(transacoes: TransacaoComRelacoes[], tipo: TipoTransacao) {
   return transacoes
-    .filter((t) => t.tipo === tipo && t.status === "approved")
+    .filter(
+      (t) => t.tipo === tipo && t.status === "approved" && !ehTransferencia(t),
+    )
+    .reduce((total, t) => total + t.valor, 0);
+}
+
+/** Total movimentado em transferências entre contas, no período. */
+export function somarTransferencias(
+  transacoes: TransacaoComRelacoes[],
+  tipo: TipoTransacao,
+) {
+  return transacoes
+    .filter((t) => t.tipo === tipo && t.status === "approved" && ehTransferencia(t))
     .reduce((total, t) => total + t.valor, 0);
 }
 
@@ -175,7 +193,7 @@ export function fluxoDiario(
   }
 
   for (const t of transacoes) {
-    if (t.status !== "approved") continue;
+    if (t.status !== "approved" || ehTransferencia(t)) continue;
     const ponto = pontos.get(chaveLocal(new Date(t.ocorrido_em)));
     if (!ponto) continue;
     if (t.tipo === "entrada") ponto.entradas += t.valor;
@@ -194,7 +212,7 @@ export function porCategoria(
   const mapa = new Map<string, FatiaCategoria>();
 
   for (const t of transacoes) {
-    if (t.tipo !== tipo || t.status !== "approved") continue;
+    if (t.tipo !== tipo || t.status !== "approved" || ehTransferencia(t)) continue;
     const nome = t.categoria?.nome ?? "Sem categoria";
     const cor = t.categoria?.cor ?? "#94A3B8";
     const atual = mapa.get(nome) ?? { nome, cor, valor: 0 };
