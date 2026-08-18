@@ -111,7 +111,13 @@ export function TabelaTransacoes({
                     {formatarDataHora(t.ocorrido_em)}
                   </td>
 
-                  <td className="px-5 py-3">
+                  {/*
+                    max-w-0 + w-full faz esta coluna absorver o espaço que
+                    sobra e, principalmente, permite que o texto seja cortado
+                    com reticências. Sem isso uma descrição longa estica a
+                    tabela e empurra a coluna de categoria para fora da tela.
+                  */}
+                  <td className="w-full max-w-0 px-5 py-3">
                     <div className="flex items-center gap-2.5">
                       <span
                         aria-hidden
@@ -121,8 +127,11 @@ export function TabelaTransacoes({
                       >
                         {entrada ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-texto">
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className="block truncate font-medium text-texto"
+                          title={t.descricao ?? undefined}
+                        >
                           {t.descricao || (entrada ? "Entrada" : "Saída")}
                         </span>
                         {t.contraparte && (
