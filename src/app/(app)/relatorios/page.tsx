@@ -80,7 +80,7 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
           <p className="flex items-center gap-1.5 text-xs text-texto-suave">
             <TrendingUp size={13} aria-hidden /> Entradas
           </p>
-          <p className="text-xl font-semibold tabular-nums text-entrada">
+          <p className="valor-sensivel text-xl font-semibold tabular-nums text-entrada">
             {formatarMoeda(totalEntradas)}
           </p>
         </div>
@@ -88,14 +88,14 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
           <p className="flex items-center gap-1.5 text-xs text-texto-suave">
             <TrendingDown size={13} aria-hidden /> Saídas
           </p>
-          <p className="text-xl font-semibold tabular-nums text-saida">
+          <p className="valor-sensivel text-xl font-semibold tabular-nums text-saida">
             {formatarMoeda(totalSaidas)}
           </p>
         </div>
         <div className="cartao px-5 py-4">
           <p className="text-xs text-texto-suave">Resultado</p>
           <p
-            className={`text-xl font-semibold tabular-nums ${
+            className={`valor-sensivel text-xl font-semibold tabular-nums ${
               totalEntradas - totalSaidas >= 0 ? "text-entrada" : "text-saida"
             }`}
           >
@@ -108,7 +108,9 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
         <h2 className="mb-4 text-sm font-semibold text-texto">
           Entradas e saídas por categoria
         </h2>
-        <GraficoPorCategoria dados={resumo} />
+        <div className="grafico-sensivel">
+          <GraficoPorCategoria dados={resumo} />
+        </div>
       </section>
 
       <section className="cartao overflow-hidden">
@@ -153,14 +155,14 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
                         <span className="text-texto">{c.nome}</span>
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right tabular-nums text-entrada">
+                    <td className="valor-sensivel px-5 py-3 text-right tabular-nums text-entrada">
                       {c.entradas ? formatarMoeda(c.entradas) : "—"}
                     </td>
-                    <td className="px-5 py-3 text-right tabular-nums text-saida">
+                    <td className="valor-sensivel px-5 py-3 text-right tabular-nums text-saida">
                       {c.saidas ? formatarMoeda(c.saidas) : "—"}
                     </td>
                     <td
-                      className={`px-5 py-3 text-right font-semibold tabular-nums ${
+                      className={`valor-sensivel px-5 py-3 text-right font-semibold tabular-nums ${
                         c.resultado >= 0 ? "text-entrada" : "text-saida"
                       }`}
                     >

@@ -95,6 +95,25 @@ body {
   box-shadow: var(--sombra);
 }
 
+/* ------------------------------------------------------------------
+   Ocultar valores
+   Desfoque em vez de trocar o texto: o layout não se mexe, então ligar e
+   desligar não faz a tela pular. Marque com `valor-sensivel` tudo que
+   revela dinheiro — números, gráficos e barras.
+   ------------------------------------------------------------------ */
+:root[data-valores="ocultos"] .valor-sensivel {
+  filter: blur(7px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Gráficos precisam de mais desfoque: a forma das barras já entrega. */
+:root[data-valores="ocultos"] .grafico-sensivel {
+  filter: blur(12px);
+  user-select: none;
+  pointer-events: none;
+}
+
 /* Barra de rolagem discreta */
 * {
   scrollbar-width: thin;

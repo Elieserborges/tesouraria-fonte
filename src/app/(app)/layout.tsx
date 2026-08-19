@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Navegacao } from "@/components/shell/navegacao";
 import { AlternarTema } from "@/components/shell/alternar-tema";
+import { AlternarValores } from "@/components/shell/alternar-valores";
 import { obterSessao } from "@/lib/supabase/server";
 import { contarSemCategoria } from "@/lib/dados";
 import { ehAdmin, PAPEL_LABEL, type PapelUsuario } from "@/lib/types";
@@ -26,7 +27,8 @@ export default async function LayoutApp({
       <aside className="flex shrink-0 flex-col gap-6 border-b border-borda bg-superficie p-4 lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r lg:p-6">
         <div className="flex items-center justify-between">
           <Logo className="text-texto" />
-          <div className="lg:hidden">
+          <div className="flex gap-2 lg:hidden">
+            <AlternarValores />
             <AlternarTema />
           </div>
         </div>
@@ -38,7 +40,12 @@ export default async function LayoutApp({
             <p className="truncate text-sm font-medium text-texto">{nome}</p>
             <p className="text-xs text-texto-suave">{PAPEL_LABEL[papel]}</p>
           </div>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 space-y-2">
+            <div className="flex">
+              <AlternarValores comRotulo />
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
             <AlternarTema comRotulo />
             <form action={sair} className="flex-1">
               <button

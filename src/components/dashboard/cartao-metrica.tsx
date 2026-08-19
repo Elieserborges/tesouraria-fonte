@@ -64,7 +64,7 @@ export function CartaoMetrica({
       </header>
 
       <p
-        className={`text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${
+        className={`valor-sensivel text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${
           destaque ? "text-white" : "text-texto"
         }`}
       >
@@ -87,7 +87,7 @@ export function CartaoMetrica({
 
       {rodape && (
         <div
-          className={`mt-auto border-t pt-3 text-xs ${
+          className={`valor-sensivel mt-auto border-t pt-3 text-xs ${
             destaque ? "border-white/15 text-white/70" : "border-borda text-texto-suave"
           }`}
         >

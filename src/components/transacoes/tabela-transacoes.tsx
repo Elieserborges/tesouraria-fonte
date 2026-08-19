@@ -201,7 +201,7 @@ export function TabelaTransacoes({
                   )}
 
                   <td
-                    className={`whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums ${
+                    className={`valor-sensivel whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums ${
                       entrada ? "text-entrada" : "text-saida"
                     }`}
                   >

@@ -148,14 +148,18 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           <h2 className="mb-4 text-sm font-semibold text-texto">
             Fluxo de caixa diário
           </h2>
-          <GraficoFluxo dados={fluxo} />
+          <div className="grafico-sensivel">
+            <GraficoFluxo dados={fluxo} />
+          </div>
         </div>
 
         <div className="cartao p-5 xl:col-span-2">
           <h2 className="mb-4 text-sm font-semibold text-texto">
             Saídas por categoria
           </h2>
-          <GraficoCategorias dados={despesas} />
+          <div className="grafico-sensivel">
+            <GraficoCategorias dados={despesas} />
+          </div>
         </div>
       </section>
 

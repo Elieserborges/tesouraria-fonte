@@ -18,7 +18,7 @@ export const metadata: Metadata = {
  * salvo — e em máquina com troca automática de tema, cada F5 vinha
  * diferente. Por isso a primeira visita já grava "claro" explicitamente.
  */
-const scriptTema = `(function(){try{var t=localStorage.getItem("tema");if(t!=="claro"&&t!=="escuro"){t="claro";localStorage.setItem("tema",t)}document.documentElement.dataset.tema=t}catch(e){document.documentElement.dataset.tema="claro"}})();`;
+const scriptTema = `(function(){try{var t=localStorage.getItem("tema");if(t!=="claro"&&t!=="escuro"){t="claro";localStorage.setItem("tema",t)}document.documentElement.dataset.tema=t;if(localStorage.getItem("valores")==="ocultos"){document.documentElement.dataset.valores="ocultos"}}catch(e){document.documentElement.dataset.tema="claro"}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -180,7 +180,7 @@ export function GerenciadorCategorias({
                         </span>
                       )}
                     </span>
-                    <span className="whitespace-nowrap text-xs text-texto-suave">
+                    <span className="valor-sensivel whitespace-nowrap text-xs text-texto-suave">
                       {c.usos} lanç. · {formatarMoeda(c.total)}
                     </span>
                     {editavel && (

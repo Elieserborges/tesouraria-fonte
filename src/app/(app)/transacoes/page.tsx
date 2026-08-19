@@ -83,13 +83,13 @@ export default async function PaginaTransacoes(props: PageProps<"/transacoes">) 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="cartao px-5 py-4">
           <p className="text-xs text-texto-suave">Entradas no filtro</p>
-          <p className="text-lg font-semibold tabular-nums text-entrada">
+          <p className="valor-sensivel text-lg font-semibold tabular-nums text-entrada">
             {formatarMoeda(entradas)}
           </p>
         </div>
         <div className="cartao px-5 py-4">
           <p className="text-xs text-texto-suave">Saídas no filtro</p>
-          <p className="text-lg font-semibold tabular-nums text-saida">
+          <p className="valor-sensivel text-lg font-semibold tabular-nums text-saida">
             {formatarMoeda(saidas)}
           </p>
         </div>
