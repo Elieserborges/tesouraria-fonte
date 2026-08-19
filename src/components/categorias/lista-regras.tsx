@@ -4,7 +4,9 @@ import { useState, useTransition } from "react";
 import { Check, Pencil, Trash2, Wand2, X } from "lucide-react";
 import { atualizarRegra, removerRegra } from "@/app/(app)/categorias/actions";
 import {
+  CAMPO_LABEL,
   ROTULO_SEM_DESCRICAO,
+  type CampoRegra,
   type ModoRegra,
   type RegraComUso,
 } from "@/lib/types";
@@ -20,11 +22,12 @@ function Editor({
 }) {
   const [padrao, setPadrao] = useState(regra.padrao);
   const [modo, setModo] = useState<ModoRegra>(regra.modo);
+  const [campo, setCampo] = useState<CampoRegra>(regra.campo);
   const [pendente, iniciar] = useTransition();
 
   function salvar() {
     iniciar(async () => {
-      const r = await atualizarRegra(regra.id, padrao, modo);
+      const r = await atualizarRegra(regra.id, padrao, modo, campo);
       if (r.erro) aoResultado(null, r.erro);
       else {
         aoResultado(r.sucesso ?? null, null);
@@ -35,6 +38,18 @@ function Editor({
 
   return (
     <div className="space-y-3 bg-superficie-2/60 px-5 py-4">
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium text-texto">Comparar com</span>
+        <select
+          value={campo}
+          onChange={(e) => setCampo(e.target.value as CampoRegra)}
+          className="w-full rounded-xl border border-borda bg-superficie px-3 py-2 text-sm text-texto outline-none focus:border-primaria focus:ring-2 focus:ring-primaria/25"
+        >
+          <option value="descricao">Descrição da movimentação</option>
+          <option value="contraparte">Nome de quem pagou ou recebeu</option>
+        </select>
+      </label>
+
       <label className="block space-y-1.5">
         <span className="text-sm font-medium text-texto">Texto da regra</span>
         <input
@@ -135,6 +150,7 @@ export function ListaRegras({
           <em>inscrição café com dança</em> para valer para todos os inscritos.
           Trocar a categoria de uma transação atualiza a regra e todas as que
           ela já havia classificado; as que você marcou à mão ficam como estão.
+          Pix sem descrição vira regra pelo nome de quem pagou.
         </p>
       </header>
 
@@ -175,6 +191,7 @@ export function ListaRegras({
                     {r.padrao || <em className="text-texto-suave">{ROTULO_SEM_DESCRICAO}</em>}
                   </span>
                   <span className="text-xs text-texto-suave">
+                    {CAMPO_LABEL[r.campo]} ·{" "}
                     {r.modo === "contem" ? "contém" : "idêntica"} · {r.atingidas}{" "}
                     transação{r.atingidas === 1 ? "" : "ões"}
                   </span>

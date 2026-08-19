@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obterSessao } from "@/lib/supabase/server";
-import { padraoDaDescricao, podeEditar } from "@/lib/types";
+import { padraoDaTransacao, podeEditar } from "@/lib/types";
 
 export type EstadoFormulario = { erro?: string; sucesso?: string };
 
@@ -42,7 +42,7 @@ export async function atribuirCategoria(
 
     const { data: transacao, error: erroBusca } = await supabase
       .from("transacoes")
-      .select("id, tipo, descricao")
+      .select("id, tipo, descricao, contraparte")
       .eq("id", transacaoId)
       .single();
 
@@ -56,27 +56,28 @@ export async function atribuirCategoria(
 
     if (error) return { erro: error.message };
 
-    const { padrao, modo } = padraoDaDescricao(transacao.descricao);
+    // Casa pela descrição quando existe; senão pelo nome de quem pagou.
+    // Sem nenhum dos dois não há regra — um padrão vazio casaria com toda
+    // transação sem descrição, e uma vez isso arrastou 392 lançamentos
+    // (R$ 54 mil) para a categoria errada.
+    const alvo = padraoDaTransacao(transacao);
+    semRegra = Boolean(categoriaId) && criarRegra && alvo === null;
 
-    // Transação sem descrição não vira regra: o "vazio" não identifica nada
-    // e casaria com todas as outras sem descrição. Aconteceu uma vez —
-    // uma classificação arrastou 392 lançamentos (R$ 54 mil) para a
-    // categoria errada.
-    const podeVirarRegra = categoriaId && criarRegra && padrao !== "";
-    semRegra = Boolean(categoriaId) && criarRegra && padrao === "";
+    if (categoriaId && criarRegra && alvo) {
+      const { padrao, modo, campo } = alvo;
 
-    if (podeVirarRegra) {
       const { error: erroRegra } = await supabase
         .from("regras_categoria")
         .upsert(
           {
             padrao,
             modo,
+            campo,
             tipo: transacao.tipo,
             categoria_id: categoriaId,
             criado_por: user.id,
           },
-          { onConflict: "padrao,tipo,modo" },
+          { onConflict: "padrao,tipo,modo,campo" },
         );
 
       if (erroRegra) return { erro: erroRegra.message };

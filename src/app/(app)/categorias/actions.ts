@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obterSessao } from "@/lib/supabase/server";
-import { podeEditar, type ModoRegra } from "@/lib/types";
+import { podeEditar, type CampoRegra, type ModoRegra } from "@/lib/types";
 
 export type EstadoCategoria = { erro?: string; sucesso?: string };
 
@@ -60,6 +60,7 @@ export async function atualizarRegra(
   regraId: string,
   padrao: string,
   modo: ModoRegra,
+  campo: CampoRegra = "descricao",
 ): Promise<EstadoCategoria & { aplicadas?: number }> {
   let aplicadas = 0;
   try {
@@ -72,7 +73,7 @@ export async function atualizarRegra(
 
     const { error } = await supabase
       .from("regras_categoria")
-      .update({ padrao: limpo, modo })
+      .update({ padrao: limpo, modo, campo })
       .eq("id", regraId);
 
     if (error) {

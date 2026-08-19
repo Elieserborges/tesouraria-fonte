@@ -47,16 +47,29 @@ export type Transacao = {
 };
 
 export type ModoRegra = "exata" | "contem";
+export type CampoRegra = "descricao" | "contraparte";
 
-/** Regra "descrição + tipo => categoria", aplicada automaticamente. */
+/** Regra "texto + tipo => categoria", aplicada automaticamente. */
 export type RegraCategoria = {
   id: string;
   padrao: string;
   modo: ModoRegra;
+  campo: CampoRegra;
   tipo: TipoTransacao;
   categoria_id: string;
   criado_em: string;
 };
+
+export const CAMPO_LABEL: Record<CampoRegra, string> = {
+  descricao: "descrição",
+  contraparte: "pessoa",
+};
+
+/** Nome mascarado pela API do Mercado Pago, ou e-mail — não serve de regra. */
+export function nomeUtil(contraparte: string | null | undefined): boolean {
+  const n = (contraparte ?? "").trim();
+  return n.length >= 4 && !/^[Xx]+$/.test(n) && !n.includes("@");
+}
 
 /**
  * Escolhe o padrão de uma regra a partir da descrição.
@@ -77,6 +90,33 @@ export function padraoDaDescricao(descricao: string | null | undefined): {
     return { padrao: separador[1].trim(), modo: "contem" };
   }
   return { padrao: completo, modo: "exata" };
+}
+
+/**
+ * Decide sobre o que a regra vai casar.
+ *
+ * Com descrição, ela manda — identifica o motivo do pagamento. Sem descrição
+ * (o caso de todo Pix direto), o que resta é quem pagou: um dizimista
+ * recorrente vira uma regra só. Se não há nem um nem outro, não há regra.
+ */
+export function padraoDaTransacao(transacao: {
+  descricao?: string | null;
+  contraparte?: string | null;
+}): { padrao: string; modo: ModoRegra; campo: CampoRegra } | null {
+  const daDescricao = padraoDaDescricao(transacao.descricao);
+  if (daDescricao.padrao !== "") {
+    return { ...daDescricao, campo: "descricao" };
+  }
+
+  if (nomeUtil(transacao.contraparte)) {
+    return {
+      padrao: normalizarPadrao(transacao.contraparte),
+      modo: "exata",
+      campo: "contraparte",
+    };
+  }
+
+  return null;
 }
 
 export type RegraComUso = RegraCategoria & {

@@ -197,12 +197,48 @@ alter table public.regras_categoria drop constraint if exists regras_categoria_m
 alter table public.regras_categoria
   add constraint regras_categoria_modo_check check (modo in ('exata', 'contem'));
 
+/*
+ * Contra qual campo a regra compara.
+ *
+ * 'descricao'   = o texto da movimentação
+ * 'contraparte' = o nome de quem pagou ou recebeu
+ *
+ * O segundo existe porque Pix não traz descrição: 511 movimentos chegaram
+ * em branco. O que identifica esses é a pessoa — e um dizimista recorrente
+ * vira uma regra só.
+ */
+alter table public.regras_categoria
+  add column if not exists campo text not null default 'descricao';
+
+alter table public.regras_categoria drop constraint if exists regras_categoria_campo_check;
+alter table public.regras_categoria
+  add constraint regras_categoria_campo_check check (campo in ('descricao', 'contraparte'));
+
 alter table public.regras_categoria drop constraint if exists regras_categoria_padrao_tipo_key;
+drop index if exists public.regras_categoria_unica;
 create unique index if not exists regras_categoria_unica
-  on public.regras_categoria (padrao, tipo, modo);
+  on public.regras_categoria (padrao, tipo, modo, campo);
 
 create index if not exists transacoes_descricao_norm_idx
   on public.transacoes (lower(btrim(coalesce(descricao, ''))));
+
+/*
+ * Texto da transação contra o qual a regra compara, já normalizado.
+ * Existe para não repetir o mesmo CASE em cada consulta que usa regras.
+ */
+create or replace function public.valor_do_campo(
+  t public.transacoes,
+  campo text
+)
+returns text
+language sql
+immutable
+as $$
+  select lower(btrim(coalesce(
+    case when campo = 'contraparte' then t.contraparte else t.descricao end,
+    ''
+  )));
+$$;
 
 /*
  * Aplica as regras às transações.
@@ -232,12 +268,13 @@ begin
            r.categoria_id
       from public.transacoes t
       join public.regras_categoria r
-        -- padrão vazio nunca vale: casaria com toda transação sem descrição
-        on r.tipo = t.tipo and r.padrao <> ''
+        -- padrão vazio nunca vale: casaria com toda transação sem o campo
+        on r.tipo = t.tipo
+       and r.padrao <> ''
        and (
-         (r.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = r.padrao)
+         (r.modo = 'exata' and public.valor_do_campo(t, r.campo) = r.padrao)
          or (r.modo = 'contem'
-             and lower(btrim(coalesce(t.descricao, ''))) like '%' || r.padrao || '%')
+             and public.valor_do_campo(t, r.campo) like '%' || r.padrao || '%')
        )
      where t.categoria_id is null or t.categoria_automatica
      order by t.id, (r.modo = 'exata') desc, length(r.padrao) desc, r.criado_em desc
@@ -281,10 +318,12 @@ begin
      where t.categoria_automatica
        and t.categoria_id = regra.categoria_id
        and t.tipo = regra.tipo
+       and regra.padrao <> ''
        and (
-         (regra.modo = 'exata' and lower(btrim(coalesce(t.descricao, ''))) = regra.padrao)
-         or (regra.modo = 'contem' and regra.padrao <> ''
-             and lower(btrim(coalesce(t.descricao, ''))) like '%' || regra.padrao || '%')
+         (regra.modo = 'exata'
+          and public.valor_do_campo(t, regra.campo) = regra.padrao)
+         or (regra.modo = 'contem'
+             and public.valor_do_campo(t, regra.campo) like '%' || regra.padrao || '%')
        );
     get diagnostics afetadas = row_count;
   end if;
