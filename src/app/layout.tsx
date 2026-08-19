@@ -10,8 +10,15 @@ export const metadata: Metadata = {
   description: "Controle financeiro — entradas, saídas, categorias e relatórios.",
 };
 
-// Aplica o tema salvo antes da primeira pintura, evitando o "flash" branco.
-const scriptTema = `(function(){try{var t=localStorage.getItem("tema");if(!t){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro"}document.documentElement.dataset.tema=t}catch(e){}})();`;
+/*
+ * Aplica o tema antes da primeira pintura, evitando o "flash" branco.
+ *
+ * A escolha fica travada no navegador: só muda quando a pessoa clica no
+ * botão. Antes isto caía na preferência do sistema quando não havia nada
+ * salvo — e em máquina com troca automática de tema, cada F5 vinha
+ * diferente. Por isso a primeira visita já grava "claro" explicitamente.
+ */
+const scriptTema = `(function(){try{var t=localStorage.getItem("tema");if(t!=="claro"&&t!=="escuro"){t="claro";localStorage.setItem("tema",t)}document.documentElement.dataset.tema=t}catch(e){document.documentElement.dataset.tema="claro"}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
