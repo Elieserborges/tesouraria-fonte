@@ -11,7 +11,8 @@
     "promover": "node --env-file=.env.local scripts/promover-admin.mjs",
     "importar": "node --env-file=.env.local scripts/importar-historico.mjs",
     "importar-extrato": "node --env-file=.env.local scripts/importar-extrato-pdf.mjs",
-    "enriquecer": "node --env-file=.env.local scripts/enriquecer-nomes.mjs"
+    "enriquecer": "node --env-file=.env.local scripts/enriquecer-nomes.mjs",
+    "pagadores": "node --env-file=.env.local scripts/montar-cadastro-pagadores.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

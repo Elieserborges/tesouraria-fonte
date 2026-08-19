@@ -295,6 +295,64 @@ end;
 $$;
 
 -- -------------------------------------------------------------
+-- Cadastro de pagadores
+--
+-- A API do Mercado Pago mascara o nome de quem paga por Pix: vem
+-- "XXXXXXXXXXX" no e-mail, first_name nulo e CPF 99999999999. O nome real
+-- só aparece no extrato em PDF.
+--
+-- Mas o `payer.id` vem limpo e é estável por pessoa. Então, uma vez que o
+-- extrato ensina que o id X é a Maria, todo Pix futuro dela é identificado
+-- na hora, sem esperar o extrato do mês.
+-- -------------------------------------------------------------
+create table if not exists public.pagadores (
+  mp_payer_id   text primary key,
+  nome          text not null,
+  atualizado_em timestamptz not null default now()
+);
+
+alter table public.pagadores enable row level security;
+
+drop policy if exists "pagadores: leitura" on public.pagadores;
+create policy "pagadores: leitura" on public.pagadores
+  for select to authenticated using (true);
+
+drop policy if exists "pagadores: escrita" on public.pagadores;
+create policy "pagadores: escrita" on public.pagadores
+  for all to authenticated
+  using (public.pode_editar()) with check (public.pode_editar());
+
+create index if not exists transacoes_payer_id_idx
+  on public.transacoes ((payload -> 'payer' ->> 'id'));
+
+/*
+ * Preenche o nome de quem pagou usando o cadastro.
+ * Só toca no que está vazio ou mascarado — nome já conhecido é preservado.
+ */
+create or replace function public.aplicar_nomes_pagadores()
+returns integer
+language plpgsql
+as $$
+declare
+  afetadas integer;
+begin
+  update public.transacoes t
+     set contraparte = p.nome
+    from public.pagadores p
+   where t.payload -> 'payer' ->> 'id' = p.mp_payer_id
+     and (
+       t.contraparte is null
+       or btrim(t.contraparte) = ''
+       or t.contraparte ~ '^[Xx]+$'
+       or t.contraparte like '%@%'
+     );
+
+  get diagnostics afetadas = row_count;
+  return afetadas;
+end;
+$$;
+
+-- -------------------------------------------------------------
 -- Log de webhooks (auditoria + idempotência)
 -- -------------------------------------------------------------
 create table if not exists public.webhook_eventos (

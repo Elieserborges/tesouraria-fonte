@@ -82,6 +82,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Nome de quem pagou vem mascarado na API; o cadastro de pagadores
+  // preenche a partir do que os extratos ja ensinaram.
+  const { data: nomeados } = await admin.rpc("aplicar_nomes_pagadores");
+
   // Classifica o que casar com as regras já cadastradas.
   const { data: classificadas } = await admin.rpc("aplicar_regras_categoria");
 
@@ -89,6 +93,7 @@ export async function GET(request: NextRequest) {
     ok: true,
     janela: { de: de.toISOString(), ate: ate.toISOString() },
     contas: resultado,
+    nomeados: Number(nomeados ?? 0),
     classificadas: Number(classificadas ?? 0),
   });
 }
