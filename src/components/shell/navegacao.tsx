@@ -29,14 +29,17 @@ const ITENS = [
 export function Navegacao({
   pendentes = 0,
   ehAdmin = false,
+  emGaveta = false,
 }: {
   pendentes?: number;
   ehAdmin?: boolean;
+  /** Dentro da gaveta do celular, onde há largura para uma coluna só. */
+  emGaveta?: boolean;
 }) {
   const caminho = usePathname();
 
   return (
-    <nav className="flex flex-wrap gap-1 lg:flex-col lg:flex-nowrap">
+    <nav className={emGaveta ? "flex flex-col gap-0.5" : "flex flex-col gap-1"}>
       {ITENS.filter((item) => !item.soAdmin || ehAdmin).map(({ href, rotulo, Icone }) => {
         const ativo = caminho === href || caminho.startsWith(`${href}/`);
         return (
@@ -44,7 +47,7 @@ export function Navegacao({
             key={href}
             href={href}
             aria-current={ativo ? "page" : undefined}
-            className={`flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition lg:flex-none ${
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               ativo
                 ? "bg-primaria text-primaria-contraste shadow-sm"
                 : "text-texto-suave hover:bg-superficie-2 hover:text-texto"

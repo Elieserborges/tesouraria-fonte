@@ -93,7 +93,7 @@ export function SeletorPeriodo({
   const lista = atalhosDePeriodo();
 
   return (
-    <div className="flex items-center gap-1" ref={caixa}>
+    <div className="flex w-full items-center gap-1 sm:w-auto" ref={caixa}>
       {ehMesFechado && (
         <button
           type="button"
@@ -105,13 +105,13 @@ export function SeletorPeriodo({
         </button>
       )}
 
-      <div className="relative">
+      <div className="relative min-w-0 flex-1 sm:flex-none">
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
           aria-haspopup="menu"
-          className="flex items-center gap-2 rounded-lg border border-borda bg-superficie px-3.5 py-2 text-sm font-medium capitalize text-texto transition hover:bg-superficie-2"
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-borda bg-superficie px-3.5 py-2 text-sm font-medium capitalize text-texto transition hover:bg-superficie-2 sm:w-auto sm:justify-start"
         >
           <CalendarRange size={15} aria-hidden className="text-texto-suave" />
           {atual}
@@ -121,7 +121,7 @@ export function SeletorPeriodo({
         {aberto && (
           <div
             role="menu"
-            className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-borda bg-superficie shadow-lg"
+            className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-borda bg-superficie shadow-lg sm:left-auto sm:w-64"
           >
             <ul className="py-1">
               {lista.map((o) => {
