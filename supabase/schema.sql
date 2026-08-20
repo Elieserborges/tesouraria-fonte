@@ -147,6 +147,64 @@ create index if not exists transacoes_conta_idx       on public.transacoes (cont
 create index if not exists transacoes_categoria_idx   on public.transacoes (categoria_id);
 create index if not exists transacoes_tipo_idx        on public.transacoes (tipo);
 
+/*
+ * Forma de pagamento, derivada do payload do Mercado Pago.
+ *
+ * O campo `metodo` guarda a bandeira ("debmaster", "visa"), que não responde
+ * a pergunta da tesouraria: entrou pela maquininha, por QR Code no culto,
+ * por link de pagamento ou por Pix? Saiu no cartão físico, em Pix ou foi
+ * para o cofrinho?
+ *
+ * Quem separa isso é `point_of_interaction.type`, confirmado nos dados:
+ *   POINT          -> maquininha        INSTORE   -> QR Code presencial
+ *   CHECKOUT       -> link/checkout     MP_DEBIT_CARD -> cartão físico
+ *   PSP_TRANSFER   -> Pix               OPENFINANCE   -> Pix
+ * e `operation_type = partition_transfer` marca os cofrinhos.
+ */
+alter table public.transacoes add column if not exists forma text;
+
+create or replace function public.derivar_forma()
+returns trigger
+language plpgsql
+as $$
+declare
+  poi  text := new.payload -> 'point_of_interaction' ->> 'type';
+  op   text := new.payload ->> 'operation_type';
+  tipo text := new.payload ->> 'payment_type_id';
+  d    text := lower(coalesce(new.descricao, ''));
+begin
+  new.forma :=
+    case
+      when op = 'partition_transfer'            then 'cofrinho'
+      when poi = 'MP_DEBIT_CARD'                then 'cartao_fisico'
+      when poi = 'POINT'                        then 'maquininha'
+      when poi = 'CHECKOUT'                     then 'checkout'
+      when poi = 'INSTORE'                      then 'qr_presencial'
+      when poi in ('PSP_TRANSFER', 'OPENFINANCE') then 'pix'
+      when tipo = 'bank_transfer'               then 'pix'
+      when tipo in ('credit_card', 'debit_card', 'prepaid_card') then 'maquininha'
+      -- Lançamentos vindos do extrato em PDF não têm payload; sobra a descrição.
+      when d like 'pix %'                       then 'pix'
+      when d like 'dinheiro reservado%'
+        or d like 'dinheiro retirado%'          then 'cofrinho'
+      when new.origem = 'manual'                then 'manual'
+      when new.origem = 'extrato'               then 'transferencia'
+      else 'outros'
+    end;
+  return new;
+end;
+$$;
+
+drop trigger if exists transacoes_forma on public.transacoes;
+create trigger transacoes_forma
+  before insert or update on public.transacoes
+  for each row execute function public.derivar_forma();
+
+-- Preenche o que já está gravado (o trigger só pega escritas novas).
+update public.transacoes set atualizado_em = atualizado_em where forma is null;
+
+create index if not exists transacoes_forma_idx on public.transacoes (forma);
+
 create or replace function public.touch_atualizado_em()
 returns trigger language plpgsql as $$
 begin

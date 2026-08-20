@@ -52,6 +52,7 @@ export default async function PaginaTransacoes(props: PageProps<"/transacoes">) 
       fim,
       tipo,
       contaId: texto(sp.conta),
+      forma: texto(sp.forma),
       categoriaId: texto(sp.categoria),
       busca: texto(sp.busca),
     }),

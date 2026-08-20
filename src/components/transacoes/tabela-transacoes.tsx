@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowDownLeft, ArrowUpRight, Trash2, Wand2, Zap } from "lucide-react";
 import { formatarDataHora, formatarMoeda } from "@/lib/format";
-import type { Categoria, TransacaoComRelacoes } from "@/lib/types";
+import { FORMA_LABEL, type Categoria, type TransacaoComRelacoes } from "@/lib/types";
 import { atribuirCategoria, excluirTransacao } from "@/app/(app)/transacoes/actions";
 
 type Props = {
@@ -140,11 +140,16 @@ export function TabelaTransacoes({
                         >
                           {t.descricao || (entrada ? "Entrada" : "Saída")}
                         </span>
-                        {t.contraparte && (
-                          <span className="block truncate text-xs text-texto-suave">
-                            {t.contraparte}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1.5 text-xs text-texto-suave">
+                          {t.forma && (
+                            <span className="shrink-0 rounded bg-superficie-2 px-1.5 py-0.5">
+                              {FORMA_LABEL[t.forma] ?? t.forma}
+                            </span>
+                          )}
+                          {t.contraparte && (
+                            <span className="truncate">{t.contraparte}</span>
+                          )}
+                        </span>
                       </span>
                       {t.origem === "mercadopago" && (
                         <span

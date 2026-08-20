@@ -9,7 +9,7 @@ import type {
 } from "@/lib/types";
 
 const SELECT_TRANSACAO =
-  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
+  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, forma, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
 
 export type SaldoConta = {
   conta_id: string;
@@ -26,6 +26,7 @@ export type FiltroTransacoes = {
   contaId?: string;
   categoriaId?: string;
   tipo?: TipoTransacao;
+  forma?: string;
   busca?: string;
   limite?: number;
 };
@@ -93,6 +94,7 @@ export async function listarTransacoes(
       consulta = consulta.eq("categoria_id", filtro.categoriaId);
     }
     if (filtro.tipo) consulta = consulta.eq("tipo", filtro.tipo);
+    if (filtro.forma) consulta = consulta.eq("forma", filtro.forma);
     if (filtro.busca) {
       const termo = `%${filtro.busca}%`;
       consulta = consulta.or(`descricao.ilike.${termo},contraparte.ilike.${termo}`);

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
-import type { Categoria, Conta } from "@/lib/types";
+import { FORMA_LABEL, type Categoria, type Conta, type FormaPagamento } from "@/lib/types";
 
 const CLASSE_CAMPO =
   "rounded-xl border border-borda bg-superficie px-3 py-2 text-sm text-texto outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/25";
@@ -24,7 +24,7 @@ export function Filtros({
     router.push(`/transacoes?${proximos.toString()}`);
   }
 
-  const temFiltro = ["conta", "categoria", "tipo", "busca"].some((c) =>
+  const temFiltro = ["conta", "categoria", "tipo", "forma", "busca"].some((c) =>
     params.get(c),
   );
 
@@ -62,6 +62,20 @@ export function Filtros({
         <option value="">Todos os tipos</option>
         <option value="entrada">Entradas</option>
         <option value="saida">Saídas</option>
+      </select>
+
+      <select
+        value={params.get("forma") ?? ""}
+        onChange={(e) => atualizar("forma", e.target.value)}
+        aria-label="Filtrar por forma de pagamento"
+        className={CLASSE_CAMPO}
+      >
+        <option value="">Todas as formas</option>
+        {(Object.keys(FORMA_LABEL) as FormaPagamento[]).map((f) => (
+          <option key={f} value={f}>
+            {FORMA_LABEL[f]}
+          </option>
+        ))}
       </select>
 
       <select

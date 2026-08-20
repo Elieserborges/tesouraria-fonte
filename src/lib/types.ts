@@ -28,6 +28,30 @@ export type Categoria = {
   eh_transferencia: boolean;
 };
 
+/** Como o dinheiro entrou ou saiu — derivada do payload pelo banco. */
+export type FormaPagamento =
+  | "pix"
+  | "maquininha"
+  | "qr_presencial"
+  | "checkout"
+  | "cartao_fisico"
+  | "cofrinho"
+  | "transferencia"
+  | "manual"
+  | "outros";
+
+export const FORMA_LABEL: Record<FormaPagamento, string> = {
+  pix: "Pix",
+  maquininha: "Maquininha",
+  qr_presencial: "QR Code presencial",
+  checkout: "Checkout / link",
+  cartao_fisico: "Cartão físico",
+  cofrinho: "Cofrinho",
+  transferencia: "Transferência",
+  manual: "Lançamento manual",
+  outros: "Outros",
+};
+
 export type Transacao = {
   id: string;
   conta_id: string | null;
@@ -43,6 +67,7 @@ export type Transacao = {
   mp_payment_id: string | null;
   observacao: string | null;
   categoria_automatica: boolean;
+  forma: FormaPagamento | null;
   criado_em: string;
 };
 
