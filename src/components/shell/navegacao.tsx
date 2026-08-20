@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   CalendarRange,
   ChartColumn,
+  Download,
   Tags,
   Users,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const ITENS = [
   { href: "/relatorios", rotulo: "Relatórios", Icone: ChartColumn, soAdmin: false },
   { href: "/eventos", rotulo: "Eventos", Icone: CalendarRange, soAdmin: false },
   { href: "/categorias", rotulo: "Categorias", Icone: Tags, soAdmin: false },
+  { href: "/exportar", rotulo: "Exportar", Icone: Download, soAdmin: false },
   { href: "/usuarios", rotulo: "Usuários", Icone: Users, soAdmin: true },
 ] as const;
 

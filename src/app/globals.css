@@ -114,6 +114,62 @@ body {
   pointer-events: none;
 }
 
+/* ------------------------------------------------------------------
+   Impressão / PDF
+   O navegador gera o PDF a partir desta folha. Forçamos o tema claro:
+   fundo escuro vira mancha de tinta no papel e ilegível na tela de quem
+   recebe o arquivo.
+   ------------------------------------------------------------------ */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  :root,
+  :root[data-tema="escuro"] {
+    --fundo: #ffffff;
+    --superficie: #ffffff;
+    --superficie-2: #f6f8fc;
+    --borda: #d6dbe6;
+    --texto: #101a33;
+    --texto-suave: #4a5773;
+    --entrada: #0f5f40;
+    --saida: #a32b30;
+    --sombra: none;
+  }
+
+  /* Sempre visível no papel, mesmo com o olhinho ligado. */
+  .valor-sensivel,
+  .grafico-sensivel {
+    filter: none !important;
+  }
+
+  .nao-imprimir {
+    display: none !important;
+  }
+
+  .cartao {
+    border-radius: 0.5rem;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  /* Cabeçalho de tabela repetido a cada página do relatório. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  section {
+    break-inside: avoid;
+  }
+
+  .quebra-pagina {
+    break-before: page;
+  }
+}
+
 /* Barra de rolagem discreta */
 * {
   scrollbar-width: thin;
