@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   CalendarRange,
   ChartColumn,
+  Calculator,
   Download,
   PiggyBank,
   Tags,
@@ -21,6 +22,7 @@ const ITENS = [
   { href: "/cofrinho", rotulo: "Cofrinho", Icone: PiggyBank, soAdmin: false },
   { href: "/categorias", rotulo: "Categorias", Icone: Tags, soAdmin: false },
   { href: "/exportar", rotulo: "Exportar", Icone: Download, soAdmin: false },
+  { href: "/calculadora", rotulo: "Calculadora", Icone: Calculator, soAdmin: false },
   { href: "/usuarios", rotulo: "Usuários", Icone: Users, soAdmin: true },
 ] as const;
 
