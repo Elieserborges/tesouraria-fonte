@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 
 const SELECT_TRANSACAO =
-  "id, conta_id, categoria_id, tipo, valor, valor_bruto, tarifa, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, forma, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
+  "id, conta_id, categoria_id, tipo, valor, valor_bruto, tarifa, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, forma, criado_em, conta:contas(id, slug, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
 
 export type SaldoConta = {
   conta_id: string;
@@ -198,9 +198,48 @@ export function somar(transacoes: TransacaoComRelacoes[], tipo: TipoTransacao) {
 export function somarTransferencias(
   transacoes: TransacaoComRelacoes[],
   tipo: TipoTransacao,
+  apenasContasDePagamento = false,
 ) {
   return transacoes
-    .filter((t) => t.tipo === tipo && t.status === "approved" && ehTransferencia(t))
+    .filter(
+      (t) =>
+        t.tipo === tipo &&
+        t.status === "approved" &&
+        ehTransferencia(t) &&
+        (!apenasContasDePagamento || !ehReserva(t.conta?.slug)),
+    )
+    .reduce((total, t) => total + t.valor, 0);
+}
+
+/**
+ * Contas que guardam dinheiro sem serem meio de pagamento.
+ *
+ * O cofrinho do Mercado Pago é uma reserva dentro da mesma conta: o dinheiro
+ * continua sendo da igreja e precisa aparecer no patrimônio, mas nada entra
+ * nem sai dele por fora. Quando a pergunta é "quanto passou pela conta
+ * bancária", contar as duas pontas da mesma transferência dobra o valor — e
+ * o número deixa de bater com o extrato.
+ */
+const SLUGS_DE_RESERVA = new Set(["cofrinho"]);
+
+export function ehReserva(slug: string | null | undefined): boolean {
+  return slug ? SLUGS_DE_RESERVA.has(slug) : false;
+}
+
+/**
+ * Tudo o que passou pela conta bancária, transferências incluídas.
+ *
+ * É o número que o aplicativo do banco mostra, e o único que dá para conferir
+ * contra ele. Diferente das receitas e despesas, aqui entra o dinheiro que só
+ * mudou de lugar — mas fica de fora o que nunca tocou a conta, como o
+ * rendimento que acontece dentro do cofrinho.
+ */
+export function somarMovimentoBancario(
+  transacoes: TransacaoComRelacoes[],
+  tipo: TipoTransacao,
+) {
+  return transacoes
+    .filter((t) => t.tipo === tipo && t.status === "approved" && !ehReserva(t.conta?.slug))
     .reduce((total, t) => total + t.valor, 0);
 }
 

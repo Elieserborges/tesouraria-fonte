@@ -14,6 +14,7 @@ import {
   listarTransacoes,
   porCategoria,
   somar,
+  somarMovimentoBancario,
   somarTransferencias,
 } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
@@ -50,6 +51,12 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
   const entradasTransferidas = somarTransferencias(doPeriodo, "entrada");
   const saidasTransferidas = somarTransferencias(doPeriodo, "saida");
   const transferido = entradasTransferidas + saidasTransferidas;
+
+  // Para comparar com o extrato do banco só valem as contas por onde o
+  // dinheiro realmente passa. O cofrinho é reserva: nem as duas pontas da
+  // transferência nem o rendimento dele aparecem no extrato.
+  const entradasNaConta = somarMovimentoBancario(doPeriodo, "entrada");
+  const saidasNaConta = somarMovimentoBancario(doPeriodo, "saida");
 
   // Em "Todo o período" não há janela na URL: o gráfico usa as pontas dos
   // próprios dados.
@@ -119,7 +126,7 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           rodape={
             entradasTransferidas > 0 ? (
               <span>
-                {formatarMoeda(entradas + entradasTransferidas)} passaram pela conta,
+                {formatarMoeda(entradasNaConta)} passaram pela conta,
                 contando transferências.
               </span>
             ) : undefined
@@ -134,7 +141,7 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           rodape={
             saidasTransferidas > 0 ? (
               <span>
-                {formatarMoeda(saidas + saidasTransferidas)} saíram da conta,
+                {formatarMoeda(saidasNaConta)} saíram da conta,
                 contando transferências.
               </span>
             ) : undefined

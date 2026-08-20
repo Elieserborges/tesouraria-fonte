@@ -163,7 +163,7 @@ export const ROTULO_SEM_DESCRICAO = "(sem descrição)";
 
 /** Transação já com conta e categoria embutidas (join do Supabase). */
 export type TransacaoComRelacoes = Transacao & {
-  conta: Pick<Conta, "id" | "nome" | "cor"> | null;
+  conta: Pick<Conta, "id" | "slug" | "nome" | "cor"> | null;
   categoria: Pick<Categoria, "id" | "nome" | "cor" | "eh_transferencia"> | null;
 };
 
