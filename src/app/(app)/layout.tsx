@@ -65,7 +65,15 @@ export default async function LayoutApp({
         Some no PDF junto com o resto do sistema — o relatório impresso é o
         documento, não uma captura de tela.
       */}
-      <header className="nao-imprimir sticky top-0 z-40 flex items-center gap-2 border-b border-borda bg-superficie/90 px-3 py-2.5 backdrop-blur-md lg:hidden">
+      {/*
+        Fundo sólido, sem desfoque.
+
+        O desfoque de fundo numa barra `sticky` deixa um retângulo cinza no
+        Safari do iPhone enquanto a página rola — o navegador não consegue
+        recompor a camada a tempo. Opacidade total resolve, e a barra fica
+        legível sobre qualquer conteúdo.
+      */}
+      <header className="nao-imprimir sticky top-0 z-40 flex items-center gap-2 border-b border-borda bg-superficie px-3 py-2.5 lg:hidden">
         <MenuMobile pendentes={pendentes} ehAdmin={ehAdmin(papel)}>
           {sessaoENoRodape}
         </MenuMobile>
