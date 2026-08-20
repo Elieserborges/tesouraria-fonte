@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, PiggyBank, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
+import { AlternarValores } from "@/components/shell/alternar-valores";
 import { CartaoMetrica } from "@/components/dashboard/cartao-metrica";
 import { GraficoFluxo } from "@/components/dashboard/grafico-fluxo";
 import { GraficoCategorias } from "@/components/dashboard/grafico-categorias";
@@ -85,10 +86,11 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
       {/* Cartões de saldo */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <CartaoMetrica
-          titulo="Saldo total acumulado"
+          titulo="Saldo atual"
+          subtitulo="Todas as datas — não muda com o mês"
           valor={saldoTotal}
           destaque
-          icone={<Wallet size={18} />}
+          icone={<AlternarValores sutil />}
           rodape={
             <ul className="space-y-1">
               {saldos.map((c) => (

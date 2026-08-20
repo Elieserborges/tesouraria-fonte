@@ -4,6 +4,8 @@ import { formatarMoeda, formatarVariacao } from "@/lib/format";
 
 type Props = {
   titulo: string;
+  /** Linha de apoio sob o título — ex.: esclarecer o recorte de tempo. */
+  subtitulo?: string;
   valor: number;
   anterior?: number;
   /** "positivo" = subir é bom (entradas). "negativo" = subir é ruim (saídas). */
@@ -15,6 +17,7 @@ type Props = {
 
 export function CartaoMetrica({
   titulo,
+  subtitulo,
   valor,
   anterior,
   sentido = "neutro",
@@ -51,11 +54,18 @@ export function CartaoMetrica({
       }`}
     >
       <header className="flex items-start justify-between gap-3">
-        <h3
-          className={`text-sm font-medium ${destaque ? "text-white/70" : "text-texto-suave"}`}
-        >
-          {titulo}
-        </h3>
+        <div>
+          <h3
+            className={`text-sm font-medium ${destaque ? "text-white/70" : "text-texto-suave"}`}
+          >
+            {titulo}
+          </h3>
+          {subtitulo && (
+            <p className={`mt-0.5 text-xs ${destaque ? "text-white/50" : "text-texto-suave"}`}>
+              {subtitulo}
+            </p>
+          )}
+        </div>
         {icone && (
           <span className={destaque ? "text-white/60" : "text-texto-suave"}>
             {icone}

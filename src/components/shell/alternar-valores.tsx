@@ -20,7 +20,14 @@ const estaOculto = () => document.documentElement.dataset.valores === "ocultos";
  * por um script antes da primeira pintura. Sem isso os valores apareceriam
  * por um instante a cada carregamento, o que anularia o propósito.
  */
-export function AlternarValores({ comRotulo = false }: { comRotulo?: boolean }) {
+export function AlternarValores({
+  comRotulo = false,
+  sutil = false,
+}: {
+  comRotulo?: boolean;
+  /** Sem borda, herdando a cor do contexto — para dentro de um cartão. */
+  sutil?: boolean;
+}) {
   const oculto = useSyncExternalStore(inscrever, estaOculto, () => false);
 
   function alternar() {
@@ -42,9 +49,11 @@ export function AlternarValores({ comRotulo = false }: { comRotulo?: boolean }) 
       aria-pressed={oculto}
       title={rotulo}
       className={
-        comRotulo
-          ? "flex flex-1 items-center justify-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
-          : "grid size-9 place-items-center rounded-lg border border-borda text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+        sutil
+          ? "grid size-8 place-items-center rounded-lg opacity-60 transition hover:opacity-100"
+          : comRotulo
+            ? "flex flex-1 items-center justify-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+            : "grid size-9 place-items-center rounded-lg border border-borda text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
       }
     >
       <Icone size={15} aria-hidden />
