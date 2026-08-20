@@ -233,8 +233,15 @@ function rotuloMes(d: Date): string {
 export function fluxoDoPeriodo(
   transacoes: TransacaoComRelacoes[],
   inicio: Date,
-  fim: Date,
+  fimPedido: Date,
+  agora = new Date(),
 ): PontoFluxo[] {
+  // Não desenha o futuro: no mês corrente, a janela vai até o fim do mês,
+  // e os dias que ainda não chegaram apareceriam zerados como se nada
+  // tivesse acontecido neles.
+  const amanha = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1);
+  const fim = fimPedido > amanha ? amanha : fimPedido;
+
   const dias = Math.ceil((fim.getTime() - inicio.getTime()) / 86400000);
   const porMes = dias > DIAS_PARA_AGRUPAR_POR_MES;
 

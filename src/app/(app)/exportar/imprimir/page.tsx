@@ -270,26 +270,26 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
               </tr>
             </thead>
             <tbody>
-              {fluxo
-                .filter((p) => p.entradas || p.saidas)
-                .map((p) => (
-                  <tr key={p.dia} className="border-b border-borda/60">
-                    <td className={td}>{p.rotulo}</td>
-                    <td className={`${td} text-right tabular-nums text-entrada`}>
-                      {formatarMoeda(p.entradas)}
-                    </td>
-                    <td className={`${td} text-right tabular-nums text-saida`}>
-                      {formatarMoeda(p.saidas)}
-                    </td>
-                    <td
-                      className={`${td} text-right tabular-nums ${
-                        p.entradas - p.saidas >= 0 ? "text-entrada" : "text-saida"
-                      }`}
-                    >
-                      {formatarMoeda(p.entradas - p.saidas)}
-                    </td>
-                  </tr>
-                ))}
+              {/* Sem filtrar os zerados: um dia sem movimento é informação,
+                  e pular datas faz a tabela parecer incompleta. */}
+              {fluxo.map((p) => (
+                <tr key={p.dia} className="border-b border-borda/60">
+                  <td className={td}>{p.rotulo}</td>
+                  <td className={`${td} text-right tabular-nums text-entrada`}>
+                    {p.entradas ? formatarMoeda(p.entradas) : "—"}
+                  </td>
+                  <td className={`${td} text-right tabular-nums text-saida`}>
+                    {p.saidas ? formatarMoeda(p.saidas) : "—"}
+                  </td>
+                  <td
+                    className={`${td} text-right tabular-nums ${
+                      p.entradas - p.saidas >= 0 ? "text-entrada" : "text-saida"
+                    }`}
+                  >
+                    {p.entradas || p.saidas ? formatarMoeda(p.entradas - p.saidas) : "—"}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </section>

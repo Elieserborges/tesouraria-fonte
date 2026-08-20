@@ -149,6 +149,17 @@ body {
     display: none !important;
   }
 
+  /* O Chrome rasteriza a barra de rolagem no PDF — saía como uma faixa
+     cinza de ponta a ponta na lateral da folha. */
+  * {
+    scrollbar-width: none !important;
+    overflow: visible !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+  }
+
   /* Sem o menu, o conteúdo ocupa a folha inteira. */
   body > div {
     display: block !important;
