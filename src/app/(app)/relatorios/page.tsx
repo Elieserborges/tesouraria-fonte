@@ -8,7 +8,7 @@ import {
 } from "@/components/relatorios/seletor-periodo";
 import { SeletorMes } from "@/components/dashboard/seletor-mes";
 import { listarTransacoes, resumoPorCategoria } from "@/lib/dados";
-import { formatarMes, formatarMoeda } from "@/lib/format";
+import { formatarData, formatarMes, formatarMoeda } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Relatórios · Fluxx Finance" };
 
@@ -18,9 +18,21 @@ function mesAtual() {
 }
 
 /** Janela de datas e rótulo, conforme o período escolhido. */
-function janela(periodo: Periodo, mes: string) {
+function janela(periodo: Periodo, mes: string, de?: string, ate?: string) {
   const [ano, m] = mes.split("-").map(Number);
 
+  if (periodo === "personalizado" && de && ate) {
+    const inicio = new Date(`${de}T00:00:00`);
+    // `fim` é exclusivo na consulta, então avança um dia para incluir o
+    // último dia escolhido.
+    const fim = new Date(`${ate}T00:00:00`);
+    fim.setDate(fim.getDate() + 1);
+    return {
+      inicio,
+      fim,
+      rotulo: `${formatarData(inicio)} a ${formatarData(new Date(`${ate}T00:00:00`))}`,
+    };
+  }
   if (periodo === "ano") {
     return {
       inicio: new Date(ano, 0, 1),
@@ -42,13 +54,17 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
   const sp = await props.searchParams;
 
   const periodo: Periodo =
-    sp.periodo === "ano" || sp.periodo === "tudo" ? sp.periodo : "mes";
+    sp.periodo === "ano" || sp.periodo === "tudo" || sp.periodo === "personalizado"
+      ? sp.periodo
+      : "mes";
+  const de = typeof sp.de === "string" ? sp.de : undefined;
+  const ate = typeof sp.ate === "string" ? sp.ate : undefined;
   const mes =
     typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesAtual();
 
-  const { inicio, fim, rotulo } = janela(periodo, mes);
+  const { inicio, fim, rotulo } = janela(periodo, mes, de, ate);
 
-  const transacoes = await listarTransacoes({ inicio, fim, limite: 10000 });
+  const transacoes = await listarTransacoes({ inicio, fim, limite: 20000 });
   const resumo = resumoPorCategoria(transacoes);
 
   const totalEntradas = resumo.reduce((s, c) => s + c.entradas, 0);
@@ -65,9 +81,9 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Suspense fallback={<div className="h-10 w-48" />}>
-            <SeletorPeriodo periodo={periodo} />
+            <SeletorPeriodo periodo={periodo} de={de} ate={ate} />
           </Suspense>
-          {periodo !== "tudo" && (
+          {(periodo === "mes" || periodo === "ano") && (
             <Suspense fallback={<div className="h-10 w-44" />}>
               <SeletorMes mes={mes} />
             </Suspense>

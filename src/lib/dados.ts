@@ -64,38 +64,55 @@ export async function listarSaldosPorConta(): Promise<SaldoConta[]> {
   }));
 }
 
+/**
+ * O Supabase devolve no máximo 1000 linhas por requisição, mesmo pedindo
+ * mais. Pedir `.limit(10000)` não dá erro — simplesmente vem cortado.
+ * Foi assim que os relatórios de Ano e Tudo passaram a somar só parte das
+ * transações e mostrar um resultado errado, sem aviso nenhum.
+ */
+const MAX_POR_REQUISICAO = 1000;
+
 export async function listarTransacoes(
   filtro: FiltroTransacoes = {},
 ): Promise<TransacaoComRelacoes[]> {
   const supabase = await criarClienteServidor();
+  const teto = filtro.limite ?? 500;
 
-  let consulta = supabase
-    .from("transacoes")
-    .select(SELECT_TRANSACAO)
-    .order("ocorrido_em", { ascending: false });
+  const montarConsulta = () => {
+    let consulta = supabase
+      .from("transacoes")
+      .select(SELECT_TRANSACAO)
+      .order("ocorrido_em", { ascending: false });
 
-  if (filtro.inicio) consulta = consulta.gte("ocorrido_em", filtro.inicio.toISOString());
-  if (filtro.fim) consulta = consulta.lt("ocorrido_em", filtro.fim.toISOString());
-  if (filtro.contaId) consulta = consulta.eq("conta_id", filtro.contaId);
-  if (filtro.categoriaId === "sem-categoria") {
-    consulta = consulta.is("categoria_id", null);
-  } else if (filtro.categoriaId) {
-    consulta = consulta.eq("categoria_id", filtro.categoriaId);
+    if (filtro.inicio) consulta = consulta.gte("ocorrido_em", filtro.inicio.toISOString());
+    if (filtro.fim) consulta = consulta.lt("ocorrido_em", filtro.fim.toISOString());
+    if (filtro.contaId) consulta = consulta.eq("conta_id", filtro.contaId);
+    if (filtro.categoriaId === "sem-categoria") {
+      consulta = consulta.is("categoria_id", null);
+    } else if (filtro.categoriaId) {
+      consulta = consulta.eq("categoria_id", filtro.categoriaId);
+    }
+    if (filtro.tipo) consulta = consulta.eq("tipo", filtro.tipo);
+    if (filtro.busca) {
+      const termo = `%${filtro.busca}%`;
+      consulta = consulta.or(`descricao.ilike.${termo},contraparte.ilike.${termo}`);
+    }
+    return consulta;
+  };
+
+  const linhas: TransacaoComRelacoes[] = [];
+
+  for (let de = 0; de < teto; de += MAX_POR_REQUISICAO) {
+    const ate = Math.min(de + MAX_POR_REQUISICAO, teto) - 1;
+    const { data, error } = await montarConsulta().range(de, ate);
+    if (error) throw new Error(error.message);
+    if (!data?.length) break;
+
+    linhas.push(...(data as unknown as TransacaoComRelacoes[]));
+    if (data.length < ate - de + 1) break; // última página
   }
-  if (filtro.tipo) consulta = consulta.eq("tipo", filtro.tipo);
-  if (filtro.busca) {
-    const termo = `%${filtro.busca}%`;
-    consulta = consulta.or(`descricao.ilike.${termo},contraparte.ilike.${termo}`);
-  }
-  consulta = consulta.limit(filtro.limite ?? 500);
 
-  const { data, error } = await consulta;
-  if (error) throw new Error(error.message);
-
-  return ((data ?? []) as unknown as TransacaoComRelacoes[]).map((t) => ({
-    ...t,
-    valor: Number(t.valor),
-  }));
+  return linhas.map((t) => ({ ...t, valor: Number(t.valor) }));
 }
 
 /** Regras de categorização, com quantas transações cada uma alcança hoje. */
