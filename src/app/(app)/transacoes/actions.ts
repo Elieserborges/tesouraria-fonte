@@ -11,6 +11,8 @@ export type ResultadoCategoria = EstadoFormulario & {
   tambem?: number;
   /** true quando a transacao nao tem descricao e por isso nao gerou regra. */
   semRegra?: boolean;
+  /** Nome da categoria da regra existente, quando esta escolha virou exceção. */
+  excecao?: string;
 };
 
 async function sessaoEditor() {
@@ -65,6 +67,28 @@ export async function atribuirCategoria(
 
     if (categoriaId && criarRegra && alvo) {
       const { padrao, modo, campo } = alvo;
+
+      // Já existe regra para este padrão apontando para outra categoria?
+      // Então esta escolha é uma exceção — um pagamento de teste, um caso
+      // fora do padrão — e não uma decisão de mudar tudo. Repontar a regra
+      // aqui arrastaria todas as transações de mesma descrição, o que já
+      // aconteceu uma vez com os ingressos do Cura-me.
+      const { data: regraAtual } = await supabase
+        .from("regras_categoria")
+        .select("id, categoria_id, categoria:categorias(nome)")
+        .eq("padrao", padrao)
+        .eq("modo", modo)
+        .eq("campo", campo)
+        .eq("tipo", transacao.tipo)
+        .maybeSingle();
+
+      if (regraAtual && regraAtual.categoria_id !== categoriaId) {
+        const nome = (regraAtual.categoria as { nome?: string } | null)?.nome;
+        return {
+          sucesso: "Categoria alterada só nesta linha.",
+          excecao: nome ?? "outra categoria",
+        };
+      }
 
       const { error: erroRegra } = await supabase
         .from("regras_categoria")

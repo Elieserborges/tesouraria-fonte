@@ -35,6 +35,9 @@ export function SeletorPeriodo({
   const [inicio, setInicio] = useState(de ?? "");
   const [fim, setFim] = useState(ate ?? "");
   const [erro, setErro] = useState<string | null>(null);
+  // O painel abre no clique, antes de navegar: só dá para ir para a URL
+  // depois que as duas datas existirem.
+  const [abrirPersonalizado, setAbrirPersonalizado] = useState(false);
 
   function irPara(ajustes: Record<string, string | null>) {
     const proximos = new URLSearchParams(params.toString());
@@ -83,12 +86,20 @@ export function SeletorPeriodo({
           <button
             key={o.valor}
             type="button"
-            onClick={() =>
+            onClick={() => {
+              setErro(null);
+              if (o.valor === "personalizado") {
+                setAbrirPersonalizado(true);
+              } else {
+                setAbrirPersonalizado(false);
+                irPara({ periodo: o.valor, de: null, ate: null });
+              }
+            }}
+            aria-pressed={
               o.valor === "personalizado"
-                ? setErro(null)
-                : irPara({ periodo: o.valor, de: null, ate: null })
+                ? periodo === "personalizado" || abrirPersonalizado
+                : periodo === o.valor && !abrirPersonalizado
             }
-            aria-pressed={periodo === o.valor}
             className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
               periodo === o.valor
                 ? "bg-primaria text-primaria-contraste"
@@ -100,7 +111,7 @@ export function SeletorPeriodo({
         ))}
       </div>
 
-      {periodo === "personalizado" && (
+      {(periodo === "personalizado" || abrirPersonalizado) && (
         <div className="cartao space-y-2 p-3">
           <div className="flex flex-wrap items-end gap-2">
             <label className="space-y-1">

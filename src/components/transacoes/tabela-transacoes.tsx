@@ -33,7 +33,13 @@ export function TabelaTransacoes({
         setErro(r.erro);
         return;
       }
-      if (r.semRegra) {
+      if (r.excecao) {
+        setAviso(
+          `Aplicado só nesta linha. Já existe uma regra mandando as transações ` +
+            `com esta descrição para "${r.excecao}" — mudar a regra inteira se faz ` +
+            `em Categorias, para não arrastar as outras sem querer.`,
+        );
+      } else if (r.semRegra) {
         setAviso(
           "Categoria aplicada só nesta linha. Como a transação não tem " +
             "descrição, não dá para criar regra: o 'vazio' casaria com todos " +
