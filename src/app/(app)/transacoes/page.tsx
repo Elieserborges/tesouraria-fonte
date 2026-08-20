@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { SeletorMes } from "@/components/dashboard/seletor-mes";
+import { SeletorPeriodo } from "@/components/relatorios/seletor-periodo";
 import { Filtros } from "@/components/transacoes/filtros";
 import { NovaTransacao } from "@/components/transacoes/nova-transacao";
 import { TabelaTransacoes } from "@/components/transacoes/tabela-transacoes";
@@ -10,16 +10,12 @@ import {
   listarTransacoes,
   somar,
 } from "@/lib/dados";
-import { formatarMes, formatarMoeda } from "@/lib/format";
+import { formatarMoeda } from "@/lib/format";
+import { janelaDaUrl } from "@/lib/periodo";
 import { obterSessao } from "@/lib/supabase/server";
 import { podeEditar, type TipoTransacao } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Transações · Fluxx Finance" };
-
-function mesAtual() {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
-}
 
 function texto(valor: string | string[] | undefined): string | undefined {
   return typeof valor === "string" && valor ? valor : undefined;
@@ -28,12 +24,7 @@ function texto(valor: string | string[] | undefined): string | undefined {
 export default async function PaginaTransacoes(props: PageProps<"/transacoes">) {
   const sp = await props.searchParams;
 
-  const mes = /^\d{4}-\d{2}$/.test(texto(sp.mes) ?? "")
-    ? (sp.mes as string)
-    : mesAtual();
-  const [ano, m] = mes.split("-").map(Number);
-  const inicio = new Date(ano, m - 1, 1);
-  const fim = new Date(ano, m, 1);
+  const { tudo, de, ate, inicio, fim, rotulo } = janelaDaUrl(sp);
 
   const tipoParam = texto(sp.tipo);
   const tipo =
@@ -55,6 +46,7 @@ export default async function PaginaTransacoes(props: PageProps<"/transacoes">) 
       forma: texto(sp.forma),
       categoriaId: texto(sp.categoria),
       busca: texto(sp.busca),
+      limite: 20000,
     }),
   ]);
 
@@ -69,10 +61,10 @@ export default async function PaginaTransacoes(props: PageProps<"/transacoes">) 
           <h1 className="text-2xl font-semibold tracking-tight text-texto">
             Transações
           </h1>
-          <p className="text-sm capitalize text-texto-suave">{formatarMes(inicio)}</p>
+          <p className="text-sm capitalize text-texto-suave">{rotulo}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <SeletorMes mes={mes} />
+          <SeletorPeriodo de={tudo ? undefined : de} ate={tudo ? undefined : ate} tudo={tudo} />
           {editavel && <NovaTransacao contas={contas} categorias={categorias} />}
         </div>
       </header>

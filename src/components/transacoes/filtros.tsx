@@ -129,8 +129,14 @@ export function Filtros({
         <button
           type="button"
           onClick={() => {
-            const mes = params.get("mes");
-            router.push(`/transacoes${mes ? `?mes=${mes}` : ""}`);
+            // Limpar zera os filtros, não o período escolhido.
+            const manter = new URLSearchParams();
+            for (const chave of ["de", "ate", "periodo"]) {
+              const v = params.get(chave);
+              if (v) manter.set(chave, v);
+            }
+            const qs = manter.toString();
+            router.push(`/transacoes${qs ? `?${qs}` : ""}`);
           }}
           className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
         >

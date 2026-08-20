@@ -5,10 +5,10 @@ import { AlternarValores } from "@/components/shell/alternar-valores";
 import { CartaoMetrica } from "@/components/dashboard/cartao-metrica";
 import { GraficoFluxo } from "@/components/dashboard/grafico-fluxo";
 import { GraficoCategorias } from "@/components/dashboard/grafico-categorias";
-import { SeletorMes } from "@/components/dashboard/seletor-mes";
+import { SeletorPeriodo } from "@/components/relatorios/seletor-periodo";
 import { TabelaTransacoes } from "@/components/transacoes/tabela-transacoes";
 import {
-  fluxoDiario,
+  fluxoDoPeriodo,
   listarCategorias,
   listarSaldosPorConta,
   listarTransacoes,
@@ -16,78 +16,71 @@ import {
   somar,
   somarTransferencias,
 } from "@/lib/dados";
-import { formatarMes, formatarMoeda } from "@/lib/format";
+import { formatarMoeda } from "@/lib/format";
+import { janelaDaUrl, periodoAnterior } from "@/lib/periodo";
 import { obterSessao } from "@/lib/supabase/server";
 import { podeEditar } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Visão geral · Fluxx Finance" };
 
-/** "2026-08" -> [1º de agosto, 1º de setembro) no fuso local. */
-function intervaloDoMes(mes: string) {
-  const [ano, m] = mes.split("-").map(Number);
-  return {
-    inicio: new Date(ano, m - 1, 1),
-    fim: new Date(ano, m, 1),
-    inicioAnterior: new Date(ano, m - 2, 1),
-  };
-}
-
-function mesAtual() {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
-  const { mes: mesParam } = await props.searchParams;
-  const mes =
-    typeof mesParam === "string" && /^\d{4}-\d{2}$/.test(mesParam)
-      ? mesParam
-      : mesAtual();
-
-  const { inicio, fim, inicioAnterior } = intervaloDoMes(mes);
+  const sp = await props.searchParams;
+  const { tudo, de, ate, inicio, fim, rotulo } = janelaDaUrl(sp);
 
   const sessao = await obterSessao();
   const editavel = podeEditar(sessao?.perfil?.papel);
 
-  const [saldos, categorias, doMes, doMesAnterior] = await Promise.all([
+  const anterior = inicio && fim ? periodoAnterior(inicio, fim) : null;
+
+  const [saldos, categorias, doPeriodo, doAnterior] = await Promise.all([
     listarSaldosPorConta(),
     listarCategorias(),
-    listarTransacoes({ inicio, fim }),
-    listarTransacoes({ inicio: inicioAnterior, fim: inicio }),
+    listarTransacoes({ inicio, fim, limite: 20000 }),
+    anterior
+      ? listarTransacoes({ inicio: anterior.inicio, fim: anterior.fim, limite: 20000 })
+      : Promise.resolve([]),
   ]);
 
   const saldoTotal = saldos.reduce((total, c) => total + c.saldo, 0);
-  const entradas = somar(doMes, "entrada");
-  const saidas = somar(doMes, "saida");
-  const entradasAnterior = somar(doMesAnterior, "entrada");
-  const saidasAnterior = somar(doMesAnterior, "saida");
+  const entradas = somar(doPeriodo, "entrada");
+  const saidas = somar(doPeriodo, "saida");
+  const entradasAnterior = somar(doAnterior, "entrada");
+  const saidasAnterior = somar(doAnterior, "saida");
   const resultado = entradas - saidas;
   const transferido =
-    somarTransferencias(doMes, "saida") + somarTransferencias(doMes, "entrada");
+    somarTransferencias(doPeriodo, "saida") + somarTransferencias(doPeriodo, "entrada");
 
-  const fluxo = fluxoDiario(doMes, inicio, fim);
-  const despesas = porCategoria(doMes, "saida");
-  const recentes = doMes.slice(0, 8);
+  // Em "Todo o período" não há janela na URL: o gráfico usa as pontas dos
+  // próprios dados.
+  const tempos = doPeriodo.map((t) => new Date(t.ocorrido_em).getTime());
+  const fluxo = tempos.length
+    ? fluxoDoPeriodo(
+        doPeriodo,
+        inicio ?? new Date(Math.min(...tempos)),
+        fim ?? new Date(Math.max(...tempos) + 86400000),
+      )
+    : [];
+  const despesas = porCategoria(doPeriodo, "saida");
+  const recentes = doPeriodo.slice(0, 8);
+
+  const linkTransacoes = tudo
+    ? "/transacoes?periodo=tudo"
+    : `/transacoes?de=${de}&ate=${ate}`;
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-texto">
-            Visão geral
-          </h1>
-          <p className="text-sm capitalize text-texto-suave">
-            {formatarMes(inicio)}
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-texto">Visão geral</h1>
+          <p className="text-sm capitalize text-texto-suave">{rotulo}</p>
         </div>
-        <SeletorMes mes={mes} />
+        <SeletorPeriodo de={tudo ? undefined : de} ate={tudo ? undefined : ate} tudo={tudo} />
       </header>
 
-      {/* Cartões de saldo */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <CartaoMetrica
           titulo="Saldo atual"
-          subtitulo="Todas as datas — não muda com o mês"
+          subtitulo="Todas as datas — não muda com o período"
           valor={saldoTotal}
           destaque
           icone={<AlternarValores sutil />}
@@ -108,23 +101,23 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           }
         />
         <CartaoMetrica
-          titulo="Entradas do mês"
+          titulo="Entradas"
           valor={entradas}
-          anterior={entradasAnterior}
+          anterior={anterior ? entradasAnterior : undefined}
           sentido="positivo"
           icone={<TrendingUp size={18} />}
         />
         <CartaoMetrica
-          titulo="Saídas do mês"
+          titulo="Saídas"
           valor={saidas}
-          anterior={saidasAnterior}
+          anterior={anterior ? saidasAnterior : undefined}
           sentido="negativo"
           icone={<TrendingDown size={18} />}
         />
         <CartaoMetrica
-          titulo="Resultado do mês"
+          titulo="Resultado"
           valor={resultado}
-          anterior={entradasAnterior - saidasAnterior}
+          anterior={anterior ? entradasAnterior - saidasAnterior : undefined}
           sentido="positivo"
           icone={<PiggyBank size={18} />}
           rodape={
@@ -144,35 +137,27 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
         />
       </section>
 
-      {/* Gráficos */}
       <section className="grid gap-4 xl:grid-cols-5">
         <div className="cartao p-5 xl:col-span-3">
-          <h2 className="mb-4 text-sm font-semibold text-texto">
-            Fluxo de caixa diário
-          </h2>
+          <h2 className="mb-4 text-sm font-semibold text-texto">Fluxo de caixa</h2>
           <div className="grafico-sensivel">
             <GraficoFluxo dados={fluxo} />
           </div>
         </div>
 
         <div className="cartao p-5 xl:col-span-2">
-          <h2 className="mb-4 text-sm font-semibold text-texto">
-            Saídas por categoria
-          </h2>
+          <h2 className="mb-4 text-sm font-semibold text-texto">Saídas por categoria</h2>
           <div className="grafico-sensivel">
             <GraficoCategorias dados={despesas} />
           </div>
         </div>
       </section>
 
-      {/* Últimas transações */}
       <section className="cartao overflow-hidden">
         <header className="flex items-center justify-between gap-4 px-5 py-4">
-          <h2 className="text-sm font-semibold text-texto">
-            Movimentações recentes
-          </h2>
+          <h2 className="text-sm font-semibold text-texto">Movimentações recentes</h2>
           <Link
-            href={`/transacoes?mes=${mes}`}
+            href={linkTransacoes}
             className="flex items-center gap-1.5 text-sm font-medium text-primaria transition hover:opacity-80"
           >
             Ver todas

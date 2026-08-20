@@ -51,6 +51,46 @@ export function rotuloPeriodo(de?: string, ate?: string, tudo?: boolean): string
   return `${formatarData(d1)} a ${formatarData(d2)}`;
 }
 
+/**
+ * Resolve o intervalo pedido na URL, com o mês corrente como padrão.
+ * `fim` é exclusivo: já vem com um dia a mais para incluir a data final.
+ */
+export function janelaDaUrl(sp: {
+  periodo?: string | string[];
+  de?: string | string[];
+  ate?: string | string[];
+}) {
+  const texto = (v: string | string[] | undefined) =>
+    typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+
+  const tudo = sp.periodo === "tudo";
+  const padrao = mesCorrente();
+  const de = texto(sp.de) ?? padrao.de;
+  const ate = texto(sp.ate) ?? padrao.ate;
+
+  const inicio = new Date(`${de}T00:00:00`);
+  const fim = new Date(`${ate}T00:00:00`);
+  fim.setDate(fim.getDate() + 1);
+
+  return {
+    tudo,
+    de,
+    ate,
+    inicio: tudo ? undefined : inicio,
+    fim: tudo ? undefined : fim,
+    rotulo: rotuloPeriodo(de, ate, tudo),
+  };
+}
+
+/**
+ * Intervalo de mesma duração imediatamente anterior — é contra ele que a
+ * variação percentual compara. Para um mês fechado, dá o mês anterior.
+ */
+export function periodoAnterior(inicio: Date, fim: Date) {
+  const duracao = fim.getTime() - inicio.getTime();
+  return { inicio: new Date(inicio.getTime() - duracao), fim: new Date(inicio) };
+}
+
 /** Atalhos oferecidos no menu — pensados para tesouraria: mês e ano. */
 export function atalhosDePeriodo(referencia = new Date()) {
   const a = referencia.getFullYear();

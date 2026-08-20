@@ -213,28 +213,52 @@ function chaveLocal(data: Date): string {
   return `${data.getFullYear()}-${mes}-${dia}`;
 }
 
-/** Série diária de entradas x saídas dentro do intervalo [inicio, fim). */
-export function fluxoDiario(
+/** Acima disso o gráfico vira mensal: 100 barras diárias não se leem. */
+const DIAS_PARA_AGRUPAR_POR_MES = 92;
+
+const MES_ABREVIADO = new Intl.DateTimeFormat("pt-BR", { month: "short" });
+
+/** "nov/25" — mais curto que "nov. de 25" e cabe no eixo do gráfico. */
+function rotuloMes(d: Date): string {
+  const mes = MES_ABREVIADO.format(d).replace(".", "");
+  return `${mes}/${String(d.getFullYear()).slice(2)}`;
+}
+
+/**
+ * Série de entradas x saídas no intervalo [inicio, fim).
+ *
+ * Escolhe a granularidade pelo tamanho do período: até três meses mostra
+ * dia a dia; acima disso agrupa por mês, senão o eixo vira um borrão.
+ */
+export function fluxoDoPeriodo(
   transacoes: TransacaoComRelacoes[],
   inicio: Date,
   fim: Date,
 ): PontoFluxo[] {
+  const dias = Math.ceil((fim.getTime() - inicio.getTime()) / 86400000);
+  const porMes = dias > DIAS_PARA_AGRUPAR_POR_MES;
+
+  const chave = (d: Date) => (porMes ? chaveLocal(d).slice(0, 7) : chaveLocal(d));
   const pontos = new Map<string, PontoFluxo>();
 
   const cursor = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
   while (cursor < fim) {
-    pontos.set(chaveLocal(cursor), {
-      dia: chaveLocal(cursor),
-      rotulo: String(cursor.getDate()).padStart(2, "0"),
-      entradas: 0,
-      saidas: 0,
-    });
-    cursor.setDate(cursor.getDate() + 1);
+    const k = chave(cursor);
+    if (!pontos.has(k)) {
+      pontos.set(k, {
+        dia: k,
+        rotulo: porMes ? rotuloMes(cursor) : String(cursor.getDate()).padStart(2, "0"),
+        entradas: 0,
+        saidas: 0,
+      });
+    }
+    if (porMes) cursor.setMonth(cursor.getMonth() + 1, 1);
+    else cursor.setDate(cursor.getDate() + 1);
   }
 
   for (const t of transacoes) {
     if (t.status !== "approved" || ehTransferencia(t)) continue;
-    const ponto = pontos.get(chaveLocal(new Date(t.ocorrido_em)));
+    const ponto = pontos.get(chave(new Date(t.ocorrido_em)));
     if (!ponto) continue;
     if (t.tipo === "entrada") ponto.entradas += t.valor;
     else ponto.saidas += t.valor;
