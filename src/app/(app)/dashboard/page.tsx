@@ -47,8 +47,9 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
   const entradasAnterior = somar(doAnterior, "entrada");
   const saidasAnterior = somar(doAnterior, "saida");
   const resultado = entradas - saidas;
-  const transferido =
-    somarTransferencias(doPeriodo, "saida") + somarTransferencias(doPeriodo, "entrada");
+  const entradasTransferidas = somarTransferencias(doPeriodo, "entrada");
+  const saidasTransferidas = somarTransferencias(doPeriodo, "saida");
+  const transferido = entradasTransferidas + saidasTransferidas;
 
   // Em "Todo o período" não há janela na URL: o gráfico usa as pontas dos
   // próprios dados.
@@ -100,12 +101,29 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
             </ul>
           }
         />
+        {/*
+          O rodapé mostra o total com as transferências somadas.
+
+          Os cartões respondem "quanto foi receita e despesa", que é a pergunta
+          da prestação de contas. O extrato do banco responde outra: "quanto
+          passou pela conta" — e inclui o que só mudou de lugar, como o dinheiro
+          guardado no cofrinho. Sem os dois números lado a lado, conferir com o
+          aplicativo do banco vira adivinhação.
+        */}
         <CartaoMetrica
           titulo="Entradas"
           valor={entradas}
           anterior={anterior ? entradasAnterior : undefined}
           sentido="positivo"
           icone={<TrendingUp size={18} />}
+          rodape={
+            entradasTransferidas > 0 ? (
+              <span>
+                {formatarMoeda(entradas + entradasTransferidas)} passaram pela conta,
+                contando transferências.
+              </span>
+            ) : undefined
+          }
         />
         <CartaoMetrica
           titulo="Saídas"
@@ -113,6 +131,14 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           anterior={anterior ? saidasAnterior : undefined}
           sentido="negativo"
           icone={<TrendingDown size={18} />}
+          rodape={
+            saidasTransferidas > 0 ? (
+              <span>
+                {formatarMoeda(saidas + saidasTransferidas)} saíram da conta,
+                contando transferências.
+              </span>
+            ) : undefined
+          }
         />
         <CartaoMetrica
           titulo="Resultado"
