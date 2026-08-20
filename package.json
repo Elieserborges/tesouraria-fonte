@@ -10,9 +10,11 @@
     "checar": "node --env-file=.env.local scripts/checar-conexao.mjs",
     "promover": "node --env-file=.env.local scripts/promover-admin.mjs",
     "importar": "node --env-file=.env.local scripts/importar-historico.mjs",
-    "importar-extrato": "node --env-file=.env.local scripts/importar-extrato-pdf.mjs",
+    "importar-extrato": "node --env-file=.env.local scripts/importar-extrato.mjs",
     "enriquecer": "node --env-file=.env.local scripts/enriquecer-nomes.mjs",
-    "pagadores": "node --env-file=.env.local scripts/montar-cadastro-pagadores.mjs"
+    "pagadores": "node --env-file=.env.local scripts/montar-cadastro-pagadores.mjs",
+    "conciliar": "node --env-file=.env.local scripts/conciliar-extrato.mjs",
+    "sincronizar-extrato": "node --env-file=.env.local scripts/sincronizar-extrato.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

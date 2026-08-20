@@ -57,7 +57,12 @@ export type Transacao = {
   conta_id: string | null;
   categoria_id: string | null;
   tipo: TipoTransacao;
+  /** Líquido: o que entrou ou saiu da conta. É este que forma o saldo. */
   valor: number;
+  /** O que foi cobrado da pessoa, antes das tarifas. */
+  valor_bruto: number | null;
+  /** Tarifa e impostos retidos pelo Mercado Pago. */
+  tarifa: number;
   descricao: string | null;
   contraparte: string | null;
   metodo: string | null;

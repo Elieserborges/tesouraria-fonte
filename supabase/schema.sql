@@ -632,3 +632,52 @@ insert into public.categorias (nome, tipo, cor, eh_transferencia) values
   ('Transferência entre contas', 'saida',   '#7C8DB5', true),
   ('Transferência entre contas', 'entrada', '#7C8DB5', true)
 on conflict (nome, tipo) do update set eh_transferencia = true;
+
+-- =============================================================
+-- Extrato do Mercado Pago pela API
+-- =============================================================
+/*
+ * O valor que interessa à tesouraria é o líquido — o que de fato entrou na
+ * conta. A API de pagamentos devolve o bruto, e a diferença (tarifa) vinha
+ * sendo lançada como uma despesa mensal estimada, o que fazia o saldo
+ * divergir do extrato real.
+ *
+ * Agora cada transação guarda os três números: `valor` é o líquido e manda no
+ * saldo; `valor_bruto` é o que foi cobrado da pessoa; `tarifa` é o que o
+ * Mercado Pago reteve. Assim o relatório mostra as tarifas sem inventá-las.
+ */
+alter table public.transacoes add column if not exists valor_bruto numeric(14, 2);
+alter table public.transacoes add column if not exists tarifa      numeric(14, 2) not null default 0;
+
+comment on column public.transacoes.valor       is 'Líquido: o que entrou ou saiu da conta.';
+comment on column public.transacoes.valor_bruto is 'O que foi cobrado da pessoa, antes das tarifas.';
+comment on column public.transacoes.tarifa      is 'Tarifa e impostos retidos pelo Mercado Pago.';
+
+/*
+ * Fila dos relatórios de extrato.
+ *
+ * O relatório não sai na hora: o pedido entra numa fila do Mercado Pago e o
+ * arquivo aparece minutos depois. O cron pede numa execução e busca em outra,
+ * então o pedido precisa sobreviver entre elas.
+ */
+create table if not exists public.extrato_pedidos (
+  id            bigint primary key,             -- id devolvido pelo Mercado Pago
+  conta_id      uuid references public.contas (id) on delete cascade,
+  inicio        timestamptz not null,
+  fim           timestamptz not null,
+  arquivo       text,
+  status        text not null default 'pendente',  -- pendente | importado | erro
+  movimentos    integer,
+  detalhe       text,
+  criado_em     timestamptz not null default now(),
+  importado_em  timestamptz
+);
+
+create index if not exists extrato_pedidos_status_idx on public.extrato_pedidos (status, criado_em);
+
+alter table public.extrato_pedidos enable row level security;
+
+-- Escrita só pelo service role (que ignora RLS); leitura para quem edita.
+drop policy if exists "extrato: leitura" on public.extrato_pedidos;
+create policy "extrato: leitura" on public.extrato_pedidos
+  for select to authenticated using (public.pode_editar());

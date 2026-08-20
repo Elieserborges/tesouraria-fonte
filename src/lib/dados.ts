@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 
 const SELECT_TRANSACAO =
-  "id, conta_id, categoria_id, tipo, valor, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, forma, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
+  "id, conta_id, categoria_id, tipo, valor, valor_bruto, tarifa, descricao, contraparte, metodo, status, ocorrido_em, origem, mp_payment_id, observacao, categoria_automatica, forma, criado_em, conta:contas(id, nome, cor), categoria:categorias(id, nome, cor, eh_transferencia)";
 
 export type SaldoConta = {
   conta_id: string;

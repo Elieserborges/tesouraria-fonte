@@ -1,11 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { criarClienteAdmin } from "@/lib/supabase/admin";
 import {
+  buscarPagamento,
   buscarPagamentosNaJanela,
   credenciais,
-  nomeContraparte,
-  type PagamentoMP,
+  paraTransacao,
 } from "@/lib/mercadopago";
+import {
+  importarRelatoriosProntos,
+  pedirProximoRelatorio,
+  revisitarPendentes,
+} from "@/lib/extrato-sincronizacao";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -69,7 +74,25 @@ export async function GET(request: NextRequest) {
         if (error) throw new Error(error.message);
       }
 
-      resultado.push({ conta: conta.slug, encontrados: pagamentos.length });
+      // O extrato fecha o que a API de pagamentos não mostra (saque, Pix
+      // enviado, cofrinho) e corrige o bruto para o líquido. O relatório
+      // demora minutos: esta execução importa o que ficou pronto e deixa a
+      // próxima janela pedida para a execução seguinte.
+      // Pagamentos que ainda podem mudar de status ficariam congelados,
+      // porque a varredura acima só olha as últimas 24 horas.
+      const pendentes = await revisitarPendentes(
+        admin, conta, accessToken, buscarPagamento, paraTransacao,
+      );
+
+      const extrato = await importarRelatoriosProntos(admin, conta, accessToken);
+      const pediu = await pedirProximoRelatorio(admin, conta, accessToken);
+
+      resultado.push({
+        conta: conta.slug,
+        encontrados: pagamentos.length,
+        pendentes,
+        extrato: { ...extrato, pedidoNovo: pediu },
+      });
     } catch (e) {
       const mensagem = e instanceof Error ? e.message : "erro desconhecido";
       await admin.from("webhook_eventos").insert({
@@ -96,25 +119,4 @@ export async function GET(request: NextRequest) {
     nomeados: Number(nomeados ?? 0),
     classificadas: Number(classificadas ?? 0),
   });
-}
-
-/** Mesmo mapeamento do webhook — mantenha os dois em sincronia. */
-function paraTransacao(conta: ContaSincronizavel, pagamento: PagamentoMP) {
-  const somosRecebedor =
-    !conta.mp_user_id || String(pagamento.collector_id ?? "") === conta.mp_user_id;
-
-  return {
-    conta_id: conta.id,
-    tipo: somosRecebedor ? "entrada" : "saida",
-    valor: Math.abs(pagamento.transaction_amount ?? 0),
-    descricao: pagamento.description ?? null,
-    contraparte: nomeContraparte(pagamento),
-    metodo: pagamento.payment_method_id ?? pagamento.payment_type_id ?? null,
-    status: pagamento.status ?? "pending",
-    ocorrido_em:
-      pagamento.date_approved ?? pagamento.date_created ?? new Date().toISOString(),
-    origem: "mercadopago",
-    mp_payment_id: String(pagamento.id),
-    payload: pagamento as unknown as Record<string, unknown>,
-  };
 }

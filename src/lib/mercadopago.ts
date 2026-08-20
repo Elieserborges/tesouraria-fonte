@@ -77,6 +77,12 @@ export type PagamentoMP = {
     identification?: { type?: string; number?: string } | null;
   } | null;
   metadata?: Record<string, unknown>;
+  /* O líquido e as tarifas: é o que o extrato mostra, e o que fecha o saldo. */
+  transaction_details?: {
+    net_received_amount?: number;
+    total_paid_amount?: number;
+  } | null;
+  fee_details?: Array<{ type?: string; amount?: number }> | null;
 };
 
 export async function buscarPagamento(
@@ -163,4 +169,72 @@ export function nomeContraparte(pagamento: PagamentoMP): string | null {
   if (!p) return null;
   const nome = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
   return nome || p.email || null;
+}
+
+/**
+ * Os três valores de um pagamento.
+ *
+ * `transaction_amount` é o que a pessoa pagou. O que entra na conta é menos
+ * do que isso quando há tarifa, e é esse líquido que o extrato registra e o
+ * saldo obedece. Quando a API não informa o líquido (pagamento ainda não
+ * liberado, por exemplo), o bruto vale como melhor estimativa.
+ */
+export function valoresDoPagamento(pagamento: PagamentoMP): {
+  liquido: number;
+  bruto: number;
+  tarifa: number;
+} {
+  const bruto = Math.abs(pagamento.transaction_amount ?? 0);
+  const informado = pagamento.transaction_details?.net_received_amount;
+  const liquido =
+    typeof informado === "number" && informado > 0 ? Math.abs(informado) : bruto;
+
+  const tarifas = (pagamento.fee_details ?? []).reduce(
+    (soma, taxa) => soma + Math.abs(taxa?.amount ?? 0),
+    0,
+  );
+
+  // Prefere a diferença observada: ela já embute qualquer retenção que não
+  // esteja detalhada em `fee_details`.
+  const tarifa = liquido < bruto ? Number((bruto - liquido).toFixed(2)) : tarifas;
+
+  return { liquido, bruto, tarifa };
+}
+
+export type ContaDestino = {
+  id: string;
+  mp_user_id?: string | null;
+};
+
+/**
+ * Pagamento do Mercado Pago no formato da tabela `transacoes`.
+ *
+ * Webhook e cron gravam a mesma coisa; manter o mapeamento em um lugar só
+ * evita que os dois caminhos divirjam — foi assim que o valor bruto ficou
+ * gravado nos dois por meses.
+ *
+ * `categoria_id` fica de fora de propósito: quem faz upsert com esta linha
+ * não pode apagar a classificação que a tesouraria já ajustou à mão.
+ */
+export function paraTransacao(conta: ContaDestino, pagamento: PagamentoMP) {
+  const somosRecebedor =
+    !conta.mp_user_id || String(pagamento.collector_id ?? "") === conta.mp_user_id;
+  const { liquido, bruto, tarifa } = valoresDoPagamento(pagamento);
+
+  return {
+    conta_id: conta.id,
+    tipo: somosRecebedor ? "entrada" : "saida",
+    valor: liquido,
+    valor_bruto: bruto,
+    tarifa,
+    descricao: pagamento.description ?? null,
+    contraparte: nomeContraparte(pagamento),
+    metodo: pagamento.payment_method_id ?? pagamento.payment_type_id ?? null,
+    status: pagamento.status ?? "pending",
+    ocorrido_em:
+      pagamento.date_approved ?? pagamento.date_created ?? new Date().toISOString(),
+    origem: "mercadopago",
+    mp_payment_id: String(pagamento.id),
+    payload: pagamento as unknown as Record<string, unknown>,
+  };
 }

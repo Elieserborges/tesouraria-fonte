@@ -4,7 +4,7 @@ import {
   assinaturaValida,
   buscarPagamento,
   credenciais,
-  nomeContraparte,
+  paraTransacao,
   type PagamentoMP,
 } from "@/lib/mercadopago";
 
@@ -123,27 +123,7 @@ async function salvarTransacao(
   conta: ContaMinima,
   pagamento: PagamentoMP,
 ) {
-  // Se o recebedor é a nossa conta, é entrada; caso contrário, saída.
-  const somosRecebedor =
-    !conta.mp_user_id || String(pagamento.collector_id ?? "") === conta.mp_user_id;
-  const tipo = somosRecebedor ? "entrada" : "saida";
-
-  const ocorridoEm =
-    pagamento.date_approved ?? pagamento.date_created ?? new Date().toISOString();
-
-  const registro = {
-    conta_id: conta.id,
-    tipo,
-    valor: Math.abs(pagamento.transaction_amount ?? 0),
-    descricao: pagamento.description ?? null,
-    contraparte: nomeContraparte(pagamento),
-    metodo: pagamento.payment_method_id ?? pagamento.payment_type_id ?? null,
-    status: pagamento.status ?? "pending",
-    ocorrido_em: ocorridoEm,
-    origem: "mercadopago",
-    mp_payment_id: String(pagamento.id),
-    payload: pagamento as unknown as Record<string, unknown>,
-  };
+  const registro = paraTransacao(conta, pagamento);
 
   // upsert por mp_payment_id: reprocessar a mesma notificação é seguro,
   // e mudanças de status (aprovado -> estornado) atualizam o registro.

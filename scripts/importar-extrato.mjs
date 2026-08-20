@@ -63,7 +63,46 @@ async function linhasDoPdf(caminho) {
   return linhas;
 }
 
-const paraNumero = (s) => Number(s.replace(/\./g, "").replace(",", "."));
+const paraNumero = (s) => Number(String(s).replace(/\./g, "").replace(",", "."));
+
+/**
+ * Extrato em CSV — formato preferível ao PDF.
+ *
+ * O painel do Mercado Pago oferece os dois. O CSV traz os valores em
+ * colunas, sem depender de extrair texto de coordenadas na página, então
+ * não há risco de uma descrição longa embaralhar a leitura.
+ *
+ *   RELEASE_DATE;TRANSACTION_TYPE;REFERENCE_ID;TRANSACTION_NET_AMOUNT;PARTIAL_BALANCE
+ *   01-08-2026;Pagamento Desco alvorada;171614529170;-210,38;365,56
+ */
+function movimentosDoCsv(caminho) {
+  const linhas = readFileSync(caminho, "utf8")
+    .replace(/^﻿/, "")
+    .split(/\r?\n/);
+
+  const inicio = linhas.findIndex((l) => l.startsWith("RELEASE_DATE"));
+  if (inicio === -1) {
+    throw new Error("Não achei o cabeçalho RELEASE_DATE — o arquivo é um extrato?");
+  }
+
+  const movimentos = [];
+  for (const linha of linhas.slice(inicio + 1)) {
+    if (!linha.trim()) continue;
+    const c = linha.split(";");
+    if (c.length < 5) continue;
+
+    const [dia, mes, ano] = c[0].trim().split("-");
+    if (!ano) continue;
+
+    movimentos.push({
+      ocorridoEm: new Date(`${ano}-${mes}-${dia}T12:00:00-03:00`).toISOString(),
+      descricao: c[1].trim().replace(/\s+/g, " ").slice(0, 200),
+      id: c[2].trim(),
+      valor: paraNumero(c[3]),
+    });
+  }
+  return movimentos;
+}
 const RUIDO = /Data\s+Descrição|ID da operação|^\d+\/\d+$|DETALHE DOS MOVIMENTOS/i;
 
 const LINHA_MOVIMENTO =
@@ -118,9 +157,9 @@ if (!conta) {
   process.exit(1);
 }
 
-const arquivos = readdirSync(pasta).filter((f) => f.toLowerCase().endsWith(".pdf"));
+const arquivos = readdirSync(pasta).filter((f) => /.(pdf|csv)$/i.test(f));
 if (arquivos.length === 0) {
-  console.error(`Nenhum PDF em ${pasta}`);
+  console.error(`Nenhum extrato (.pdf ou .csv) em ${pasta}`);
   process.exit(1);
 }
 
@@ -130,8 +169,10 @@ console.log(`Modo:   ${GRAVAR ? "GRAVANDO" : "simulação — nada será alterad
 
 const movimentos = [];
 for (const f of arquivos) {
-  const m = await movimentosDoPdf(`${pasta}/${f}`);
-  console.log(`  ${f.slice(0, 40)}… ${m.length} movimentos`);
+  const caminho = `${pasta}/${f}`;
+  const ehCsv = /.csv$/i.test(f);
+  const m = ehCsv ? movimentosDoCsv(caminho) : await movimentosDoPdf(caminho);
+  console.log(`  ${ehCsv ? "csv" : "pdf"}  ${f.slice(0, 38)}… ${m.length} movimentos`);
   movimentos.push(...m);
 }
 

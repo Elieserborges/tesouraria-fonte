@@ -33,6 +33,20 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
   const totalEntradas = resumo.reduce((s, c) => s + c.entradas, 0);
   const totalSaidas = resumo.reduce((s, c) => s + c.saidas, 0);
 
+  /*
+   * Tarifas do Mercado Pago no período.
+   *
+   * Os valores acima já são líquidos — a tarifa nunca entrou na conta. Ela
+   * aparece à parte porque a tesouraria precisa saber quanto o meio de
+   * pagamento custou, sem que isso vire uma despesa inventada no meio das
+   * categorias.
+   */
+  const totalTarifas = transacoes.reduce(
+    (soma, t) => (t.status === "approved" ? soma + Number(t.tarifa ?? 0) : soma),
+    0,
+  );
+  const totalBruto = totalEntradas + totalTarifas;
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -47,7 +61,7 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
         </Suspense>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="cartao px-5 py-4">
           <p className="flex items-center gap-1.5 text-xs text-texto-suave">
             <TrendingUp size={13} aria-hidden /> Entradas
@@ -62,6 +76,17 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
           </p>
           <p className="valor-sensivel text-xl font-semibold tabular-nums text-saida">
             {formatarMoeda(totalSaidas)}
+          </p>
+        </div>
+        <div className="cartao px-5 py-4">
+          <p className="text-xs text-texto-suave">Tarifas</p>
+          <p className="valor-sensivel text-xl font-semibold tabular-nums text-texto-suave">
+            {formatarMoeda(totalTarifas)}
+          </p>
+          <p className="mt-0.5 text-[0.7rem] text-texto-suave">
+            {totalTarifas > 0
+              ? `retido de ${formatarMoeda(totalBruto)} cobrados`
+              : "nenhuma no período"}
           </p>
         </div>
         <div className="cartao px-5 py-4">
