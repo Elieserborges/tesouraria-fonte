@@ -30,6 +30,8 @@ export type FiltroTransacoes = {
   forma?: string;
   busca?: string;
   limite?: number;
+  /** Contas de reserva (cofrinho). Sem isto elas ficam de fora. */
+  reservas?: "excluir" | "somente" | "todas";
 };
 
 export async function listarContas(): Promise<Conta[]> {
@@ -67,6 +69,28 @@ export async function listarSaldosPorConta(): Promise<SaldoConta[]> {
 }
 
 /**
+ * Os ids das contas de reserva, para tirá-las das consultas.
+ *
+ * Fica em cache pela duração da requisição: são duas ou três contas que
+ * praticamente nunca mudam, e sem isso toda listagem faria uma consulta a
+ * mais só para descobrir o que já sabe.
+ */
+let idsDeReservaEmCache: string[] | null = null;
+
+export async function idsDasContasDeReserva(): Promise<string[]> {
+  if (idsDeReservaEmCache) return idsDeReservaEmCache;
+
+  const supabase = await criarClienteServidor();
+  const { data } = await supabase
+    .from("contas")
+    .select("id, slug")
+    .in("slug", [...SLUGS_DE_RESERVA]);
+
+  idsDeReservaEmCache = (data ?? []).map((c) => String(c.id));
+  return idsDeReservaEmCache;
+}
+
+/**
  * O Supabase devolve no máximo 1000 linhas por requisição, mesmo pedindo
  * mais. Pedir `.limit(10000)` não dá erro — simplesmente vem cortado.
  * Foi assim que os relatórios de Ano e Tudo passaram a somar só parte das
@@ -80,11 +104,30 @@ export async function listarTransacoes(
   const supabase = await criarClienteServidor();
   const teto = filtro.limite ?? 500;
 
+  /*
+   * Contas de reserva ficam de fora por padrão.
+   *
+   * O cofrinho tem aba própria porque o dinheiro dele não é caixa: não dá
+   * para pagar nada com ele sem antes trazer de volta. Se as movimentações
+   * aparecessem junto com as demais, cada transferência seria contada duas
+   * vezes e o total deixaria de bater com o extrato.
+   */
+  const reservas = filtro.reservas ?? "excluir";
+  const idsDeReserva = reservas === "todas" ? [] : await idsDasContasDeReserva();
+
   const montarConsulta = () => {
     let consulta = supabase
       .from("transacoes")
       .select(SELECT_TRANSACAO)
       .order("ocorrido_em", { ascending: false });
+
+    if (idsDeReserva.length > 0) {
+      const lista = `(${idsDeReserva.join(",")})`;
+      consulta =
+        reservas === "somente"
+          ? consulta.in("conta_id", idsDeReserva)
+          : consulta.or(`conta_id.is.null,conta_id.not.in.${lista}`);
+    }
 
     if (filtro.inicio) consulta = consulta.gte("ocorrido_em", filtro.inicio.toISOString());
     if (filtro.fim) consulta = consulta.lt("ocorrido_em", filtro.fim.toISOString());

@@ -14,7 +14,7 @@ import {
   listarTransacoes,
   porCategoria,
   somar,
-  somarMovimentoBancario,
+  idsDasContasDeReserva,
   somarTransferencias,
 } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
@@ -33,8 +33,9 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
 
   const anterior = inicio && fim ? periodoAnterior(inicio, fim) : null;
 
-  const [saldos, categorias, doPeriodo, doAnterior] = await Promise.all([
+  const [saldos, idsDeReserva, categorias, doPeriodo, doAnterior] = await Promise.all([
     listarSaldosPorConta(),
+    idsDasContasDeReserva(),
     listarCategorias(),
     listarTransacoes({ inicio, fim, limite: 20000 }),
     anterior
@@ -42,7 +43,18 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
       : Promise.resolve([]),
   ]);
 
-  const saldoTotal = saldos.reduce((total, c) => total + c.saldo, 0);
+  /*
+   * A reserva não entra no total.
+   *
+   * O dinheiro do cofrinho é da igreja, mas não é caixa: não dá para pagar
+   * nada com ele sem antes trazer de volta. Somar os dois daria um "saldo
+   * atual" que não corresponde ao que se pode gastar hoje. Ele aparece logo
+   * abaixo, separado, para não sumir do mapa.
+   */
+  const contasDeCaixa = saldos.filter((c) => !idsDeReserva.includes(c.conta_id));
+  const contasDeReserva = saldos.filter((c) => idsDeReserva.includes(c.conta_id));
+  const saldoTotal = contasDeCaixa.reduce((total, c) => total + c.saldo, 0);
+  const totalReservado = contasDeReserva.reduce((total, c) => total + c.saldo, 0);
   const entradas = somar(doPeriodo, "entrada");
   const saidas = somar(doPeriodo, "saida");
   const entradasAnterior = somar(doAnterior, "entrada");
@@ -52,11 +64,10 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
   const saidasTransferidas = somarTransferencias(doPeriodo, "saida");
   const transferido = entradasTransferidas + saidasTransferidas;
 
-  // Para comparar com o extrato do banco só valem as contas por onde o
-  // dinheiro realmente passa. O cofrinho é reserva: nem as duas pontas da
-  // transferência nem o rendimento dele aparecem no extrato.
-  const entradasNaConta = somarMovimentoBancario(doPeriodo, "entrada");
-  const saidasNaConta = somarMovimentoBancario(doPeriodo, "saida");
+  // Comparável com o extrato do banco: as contas de reserva já ficaram de
+  // fora da consulta, então aqui só falta somar de volta as transferências.
+  const entradasNaConta = entradas + entradasTransferidas;
+  const saidasNaConta = saidas + saidasTransferidas;
 
   // Em "Todo o período" não há janela na URL: o gráfico usa as pontas dos
   // próprios dados.
@@ -94,7 +105,7 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
           icone={<AlternarValores sutil />}
           rodape={
             <ul className="space-y-1">
-              {saldos.map((c) => (
+              {contasDeCaixa.map((c) => (
                 <li key={c.conta_id} className="flex items-center gap-2">
                   <span
                     aria-hidden
@@ -105,6 +116,15 @@ export default async function PaginaDashboard(props: PageProps<"/dashboard">) {
                   <span className="tabular-nums">{formatarMoeda(c.saldo)}</span>
                 </li>
               ))}
+              {totalReservado > 0 && (
+                <li className="mt-1 flex items-center gap-2 border-t border-white/20 pt-1.5 opacity-80">
+                  <PiggyBank size={11} aria-hidden className="shrink-0" />
+                  <Link href="/cofrinho" className="flex-1 truncate hover:underline">
+                    Guardado no cofrinho
+                  </Link>
+                  <span className="tabular-nums">{formatarMoeda(totalReservado)}</span>
+                </li>
+              )}
             </ul>
           }
         />

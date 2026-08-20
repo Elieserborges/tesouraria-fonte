@@ -22,7 +22,14 @@ export async function GET(request: NextRequest) {
   const sp = Object.fromEntries(request.nextUrl.searchParams);
   const { inicio, fim, de, ate, tudo } = janelaDaUrl(sp);
 
-  const transacoes = await listarTransacoes({ inicio, fim, limite: 50000 });
+  // A exportação leva tudo, cofrinho incluído: a coluna Conta separa o que é
+  // caixa do que é reserva, e quem confere prefere o arquivo completo.
+  const transacoes = await listarTransacoes({
+    inicio,
+    fim,
+    limite: 50000,
+    reservas: "todas",
+  });
 
   const cabecalho = [
     "Data", "Hora", "Tipo", "Valor", "Status", "Conta", "Categoria",

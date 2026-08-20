@@ -4,6 +4,7 @@ import { BotaoImprimir } from "@/components/exportar/botao-imprimir";
 import {
   fluxoDoPeriodo,
   listarEventos,
+  idsDasContasDeReserva,
   listarSaldosPorConta,
   listarTransacoes,
   resumoPorCategoria,
@@ -13,7 +14,7 @@ import {
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import { janelaDaUrl } from "@/lib/periodo";
 import { obterSessao } from "@/lib/supabase/server";
-import { FORMA_LABEL, type FormaPagamento } from "@/lib/types";
+import { ehTransferencia, FORMA_LABEL, type FormaPagamento } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Relatório · Fluxx Finance" };
 
@@ -27,9 +28,11 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
 
   const sessao = await obterSessao();
 
-  const [transacoes, saldos, eventos] = await Promise.all([
+  const [transacoes, reserva, saldos, idsDeReserva, eventos] = await Promise.all([
     listarTransacoes({ inicio, fim, limite: 50000 }),
+    listarTransacoes({ inicio, fim, limite: 5000, reservas: "somente" }),
     listarSaldosPorConta(),
+    idsDasContasDeReserva(),
     listarEventos(),
   ]);
 
@@ -38,7 +41,24 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
   const resultado = entradas - saidas;
   const transferido =
     somarTransferencias(transacoes, "saida") + somarTransferencias(transacoes, "entrada");
-  const saldoTotal = saldos.reduce((s, c) => s + c.saldo, 0);
+  // A reserva fica fora do saldo: não é caixa, e somar os dois daria um
+  // disponível que a igreja não tem. Ela ganha um bloco só dela mais abaixo.
+  const saldoTotal = saldos
+    .filter((c) => !idsDeReserva.includes(c.conta_id))
+    .reduce((s, c) => s + c.saldo, 0);
+  const saldosDeReserva = saldos.filter((c) => idsDeReserva.includes(c.conta_id));
+  const totalReservado = saldosDeReserva.reduce((s, c) => s + c.saldo, 0);
+
+  const aprovadasReserva = reserva.filter((t) => t.status === "approved");
+  const guardadoNoPeriodo = aprovadasReserva
+    .filter((t) => t.tipo === "entrada" && ehTransferencia(t))
+    .reduce((s, t) => s + t.valor, 0);
+  const resgatadoNoPeriodo = aprovadasReserva
+    .filter((t) => t.tipo === "saida" && ehTransferencia(t))
+    .reduce((s, t) => s + t.valor, 0);
+  const rendimentoNoPeriodo = aprovadasReserva
+    .filter((t) => t.tipo === "entrada" && !ehTransferencia(t))
+    .reduce((s, t) => s + t.valor, 0);
 
   const resumo = resumoPorCategoria(transacoes);
   const aprovadas = transacoes.filter((t) => t.status === "approved");
@@ -208,6 +228,61 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           </tbody>
         </table>
       </section>
+
+      {/*
+        Cofrinho.
+
+        Vem depois do resumo e antes dos eventos, com total próprio: o dinheiro
+        é da igreja e precisa constar na prestação de contas, mas somá-lo ao
+        saldo faria o relatório prometer um disponível que não existe.
+      */}
+      {(totalReservado > 0 || aprovadasReserva.length > 0) && (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">Cofrinho</h2>
+          <p className="mb-2 text-[11px] text-texto-suave">
+            Reserva da igreja, fora do saldo disponível. Para ser usada, precisa
+            voltar para a conta corrente.
+          </p>
+          <table className="w-full border-collapse text-xs">
+            <tbody>
+              {saldosDeReserva.map((c) => (
+                <tr key={c.conta_id} className="border-b border-borda/60">
+                  <td className={td}>{c.conta_nome}</td>
+                  <td className={`${td} text-right font-semibold tabular-nums`}>
+                    {formatarMoeda(c.saldo)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-b border-borda/60">
+                <td className={td}>Guardado no período</td>
+                <td className={`${td} text-right tabular-nums text-entrada`}>
+                  {formatarMoeda(guardadoNoPeriodo)}
+                </td>
+              </tr>
+              <tr className="border-b border-borda/60">
+                <td className={td}>Resgatado no período</td>
+                <td className={`${td} text-right tabular-nums text-saida`}>
+                  {formatarMoeda(resgatadoNoPeriodo)}
+                </td>
+              </tr>
+              <tr className="border-b border-borda/60">
+                <td className={td}>Rendimento no período</td>
+                <td className={`${td} text-right tabular-nums text-entrada`}>
+                  {formatarMoeda(rendimentoNoPeriodo)}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr className="border-y border-borda bg-superficie-2">
+                <td className={`${td} font-semibold`}>Guardado hoje</td>
+                <td className={`${td} text-right font-semibold tabular-nums`}>
+                  {formatarMoeda(totalReservado)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </section>
+      )}
 
       {/* Eventos */}
       {eventosDoPeriodo.length > 0 && (
