@@ -4,67 +4,43 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 import { GraficoPorCategoria } from "@/components/relatorios/grafico-por-categoria";
 import {
   SeletorPeriodo,
-  type Periodo,
+  rotuloPeriodo,
 } from "@/components/relatorios/seletor-periodo";
-import { SeletorMes } from "@/components/dashboard/seletor-mes";
 import { listarTransacoes, resumoPorCategoria } from "@/lib/dados";
-import { formatarData, formatarMes, formatarMoeda } from "@/lib/format";
+import { formatarMoeda } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Relatórios · Fluxx Finance" };
 
-function mesAtual() {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
-}
+const DATA = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Janela de datas e rótulo, conforme o período escolhido. */
-function janela(periodo: Periodo, mes: string, de?: string, ate?: string) {
-  const [ano, m] = mes.split("-").map(Number);
-
-  if (periodo === "personalizado" && de && ate) {
-    const inicio = new Date(`${de}T00:00:00`);
-    // `fim` é exclusivo na consulta, então avança um dia para incluir o
-    // último dia escolhido.
-    const fim = new Date(`${ate}T00:00:00`);
-    fim.setDate(fim.getDate() + 1);
-    return {
-      inicio,
-      fim,
-      rotulo: `${formatarData(inicio)} a ${formatarData(new Date(`${ate}T00:00:00`))}`,
-    };
-  }
-  if (periodo === "ano") {
-    return {
-      inicio: new Date(ano, 0, 1),
-      fim: new Date(ano + 1, 0, 1),
-      rotulo: String(ano),
-    };
-  }
-  if (periodo === "tudo") {
-    return { inicio: undefined, fim: undefined, rotulo: "Todo o histórico" };
-  }
+/** Primeiro e último dia do mês corrente, no fuso local. */
+function mesCorrente() {
+  const h = new Date();
+  const p = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   return {
-    inicio: new Date(ano, m - 1, 1),
-    fim: new Date(ano, m, 1),
-    rotulo: formatarMes(new Date(ano, m - 1, 1)),
+    de: p(new Date(h.getFullYear(), h.getMonth(), 1)),
+    ate: p(new Date(h.getFullYear(), h.getMonth() + 1, 0)),
   };
 }
 
 export default async function PaginaRelatorios(props: PageProps<"/relatorios">) {
   const sp = await props.searchParams;
 
-  const periodo: Periodo =
-    sp.periodo === "ano" || sp.periodo === "tudo" || sp.periodo === "personalizado"
-      ? sp.periodo
-      : "mes";
-  const de = typeof sp.de === "string" ? sp.de : undefined;
-  const ate = typeof sp.ate === "string" ? sp.ate : undefined;
-  const mes =
-    typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesAtual();
+  const tudo = sp.periodo === "tudo";
+  const padrao = mesCorrente();
+  const de = typeof sp.de === "string" && DATA.test(sp.de) ? sp.de : padrao.de;
+  const ate = typeof sp.ate === "string" && DATA.test(sp.ate) ? sp.ate : padrao.ate;
 
-  const { inicio, fim, rotulo } = janela(periodo, mes, de, ate);
+  // `fim` é exclusivo na consulta: avança um dia para incluir o último.
+  const fimExclusivo = new Date(`${ate}T00:00:00`);
+  fimExclusivo.setDate(fimExclusivo.getDate() + 1);
 
-  const transacoes = await listarTransacoes({ inicio, fim, limite: 20000 });
+  const transacoes = await listarTransacoes({
+    inicio: tudo ? undefined : new Date(`${de}T00:00:00`),
+    fim: tudo ? undefined : fimExclusivo,
+    limite: 20000,
+  });
   const resumo = resumoPorCategoria(transacoes);
 
   const totalEntradas = resumo.reduce((s, c) => s + c.entradas, 0);
@@ -74,21 +50,14 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-texto">
-            Relatórios
-          </h1>
-          <p className="text-sm capitalize text-texto-suave">{rotulo}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-texto">Relatórios</h1>
+          <p className="text-sm capitalize text-texto-suave">
+            {rotuloPeriodo(de, ate, tudo)}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Suspense fallback={<div className="h-10 w-48" />}>
-            <SeletorPeriodo periodo={periodo} de={de} ate={ate} />
-          </Suspense>
-          {(periodo === "mes" || periodo === "ano") && (
-            <Suspense fallback={<div className="h-10 w-44" />}>
-              <SeletorMes mes={mes} />
-            </Suspense>
-          )}
-        </div>
+        <Suspense fallback={<div className="h-10 w-56" />}>
+          <SeletorPeriodo de={tudo ? undefined : de} ate={tudo ? undefined : ate} tudo={tudo} />
+        </Suspense>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3">

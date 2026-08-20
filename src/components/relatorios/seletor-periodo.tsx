@@ -1,43 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { formatarData, formatarMes } from "@/lib/format";
 
-const OPCOES = [
-  { valor: "mes", rotulo: "Mês" },
-  { valor: "ano", rotulo: "Ano" },
-  { valor: "tudo", rotulo: "Tudo" },
-  { valor: "personalizado", rotulo: "Personalizado" },
-] as const;
-
-export type Periodo = (typeof OPCOES)[number]["valor"];
-
-/** Teto do período personalizado. Acima disso, use Ano ou Tudo. */
+/** Teto do intervalo personalizado. Acima disso, use Este ano ou Todo o período. */
 export const MAX_DIAS_PERSONALIZADO = 92;
 
 const CAMPO =
-  "rounded-xl border border-borda bg-superficie px-3 py-2 text-sm text-texto outline-none focus:border-primaria focus:ring-2 focus:ring-primaria/25";
+  "rounded-lg border border-borda bg-superficie px-2.5 py-1.5 text-sm text-texto outline-none focus:border-primaria focus:ring-2 focus:ring-primaria/25";
+
+/** AAAA-MM-DD no fuso local — `toISOString` jogaria o dia para trás. */
+function iso(d: Date) {
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+const hoje = () => new Date();
+
+function atalhos() {
+  const h = hoje();
+  const a = h.getFullYear();
+  const m = h.getMonth();
+  const menos = (dias: number) => {
+    const d = new Date(h);
+    d.setDate(d.getDate() - dias);
+    return d;
+  };
+
+  return [
+    { id: "este-mes", rotulo: "Este mês", de: new Date(a, m, 1), ate: new Date(a, m + 1, 0) },
+    { id: "mes-passado", rotulo: "Mês passado", de: new Date(a, m - 1, 1), ate: new Date(a, m, 0) },
+    { id: "30-dias", rotulo: "Últimos 30 dias", de: menos(29), ate: h },
+    { id: "3-meses", rotulo: "Últimos 3 meses", de: menos(89), ate: h },
+    { id: "este-ano", rotulo: "Este ano", de: new Date(a, 0, 1), ate: new Date(a, 11, 31) },
+    { id: "ano-passado", rotulo: "Ano passado", de: new Date(a - 1, 0, 1), ate: new Date(a - 1, 11, 31) },
+  ];
+}
+
+/** Nome curto do intervalo: mês fechado e ano fechado ganham rótulo próprio. */
+export function rotuloPeriodo(de?: string, ate?: string, tudo?: boolean) {
+  if (tudo || !de || !ate) return "Todo o período";
+
+  const d1 = new Date(`${de}T12:00:00`);
+  const d2 = new Date(`${ate}T12:00:00`);
+
+  const mesInteiro =
+    d1.getDate() === 1 &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear() &&
+    d2.getDate() === new Date(d2.getFullYear(), d2.getMonth() + 1, 0).getDate();
+  if (mesInteiro) return formatarMes(d1);
+
+  const anoInteiro =
+    d1.getDate() === 1 && d1.getMonth() === 0 && d2.getMonth() === 11 && d2.getDate() === 31 &&
+    d1.getFullYear() === d2.getFullYear();
+  if (anoInteiro) return String(d1.getFullYear());
+
+  return `${formatarData(d1)} a ${formatarData(d2)}`;
+}
 
 export function SeletorPeriodo({
-  periodo,
   de,
   ate,
+  tudo,
 }: {
-  periodo: Periodo;
   de?: string;
   ate?: string;
+  tudo?: boolean;
 }) {
   const router = useRouter();
   const caminho = usePathname();
   const params = useSearchParams();
 
+  const [aberto, setAberto] = useState(false);
+  const [personalizando, setPersonalizando] = useState(false);
   const [inicio, setInicio] = useState(de ?? "");
   const [fim, setFim] = useState(ate ?? "");
   const [erro, setErro] = useState<string | null>(null);
-  // O painel abre no clique, antes de navegar: só dá para ir para a URL
-  // depois que as duas datas existirem.
-  const [abrirPersonalizado, setAbrirPersonalizado] = useState(false);
+  const caixa = useRef<HTMLDivElement>(null);
+
+  // Fecha ao clicar fora — menu aberto por cima do conteúdo atrapalha mais
+  // do que ajuda se não sair sozinho.
+  useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => {
+      if (caixa.current && !caixa.current.contains(e.target as Node)) setAberto(false);
+    };
+    document.addEventListener("mousedown", fora);
+    return () => document.removeEventListener("mousedown", fora);
+  }, [aberto]);
 
   function irPara(ajustes: Record<string, string | null>) {
     const proximos = new URLSearchParams(params.toString());
@@ -46,110 +100,167 @@ export function SeletorPeriodo({
       else proximos.set(chave, valor);
     }
     router.push(`${caminho}?${proximos.toString()}`);
+    setAberto(false);
+    setPersonalizando(false);
   }
 
   function aplicarPersonalizado() {
     setErro(null);
+    if (!inicio || !fim) return setErro("Preencha as duas datas.");
+    if (fim < inicio) return setErro("A data final não pode ser anterior à inicial.");
 
-    if (!inicio || !fim) {
-      setErro("Preencha as duas datas.");
-      return;
-    }
-    const d1 = new Date(`${inicio}T00:00:00`);
-    const d2 = new Date(`${fim}T00:00:00`);
-
-    if (d2 < d1) {
-      setErro("A data final não pode ser anterior à inicial.");
-      return;
-    }
-
-    const dias = Math.round((d2.getTime() - d1.getTime()) / 86400000) + 1;
+    const dias =
+      Math.round(
+        (new Date(`${fim}T00:00:00`).getTime() - new Date(`${inicio}T00:00:00`).getTime()) /
+          86400000,
+      ) + 1;
     if (dias > MAX_DIAS_PERSONALIZADO) {
-      setErro(
-        `O período personalizado vai até 3 meses (${dias} dias selecionados). ` +
-          "Para intervalos maiores, use Ano ou Tudo.",
+      return setErro(
+        `Máximo de 3 meses (${dias} dias selecionados). Para mais, use Este ano ou Todo o período.`,
       );
-      return;
     }
-
-    irPara({ periodo: "personalizado", de: inicio, ate: fim });
+    irPara({ de: inicio, ate: fim, periodo: null });
   }
 
+  /** Passo de mês, só quando o intervalo atual é um mês fechado. */
+  const ehMesFechado =
+    !tudo && de && ate && rotuloPeriodo(de, ate) === formatarMes(new Date(`${de}T12:00:00`));
+
+  function passoMes(passo: number) {
+    if (!de) return;
+    const base = new Date(`${de}T12:00:00`);
+    const novo = new Date(base.getFullYear(), base.getMonth() + passo, 1);
+    irPara({
+      de: iso(novo),
+      ate: iso(new Date(novo.getFullYear(), novo.getMonth() + 1, 0)),
+      periodo: null,
+    });
+  }
+
+  const atual = rotuloPeriodo(de, ate, tudo);
+  const lista = atalhos();
+
   return (
-    <div className="space-y-2">
-      <div
-        role="group"
-        aria-label="Período do relatório"
-        className="flex flex-wrap rounded-xl border border-borda bg-superficie p-1"
-      >
-        {OPCOES.map((o) => (
-          <button
-            key={o.valor}
-            type="button"
-            onClick={() => {
-              setErro(null);
-              if (o.valor === "personalizado") {
-                setAbrirPersonalizado(true);
-              } else {
-                setAbrirPersonalizado(false);
-                irPara({ periodo: o.valor, de: null, ate: null });
-              }
-            }}
-            aria-pressed={
-              o.valor === "personalizado"
-                ? periodo === "personalizado" || abrirPersonalizado
-                : periodo === o.valor && !abrirPersonalizado
-            }
-            className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
-              periodo === o.valor
-                ? "bg-primaria text-primaria-contraste"
-                : "text-texto-suave hover:text-texto"
-            }`}
+    <div className="flex items-center gap-1" ref={caixa}>
+      {ehMesFechado && (
+        <button
+          type="button"
+          onClick={() => passoMes(-1)}
+          aria-label="Mês anterior"
+          className="grid size-9 place-items-center rounded-lg border border-borda text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      )}
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setAberto((v) => !v)}
+          aria-expanded={aberto}
+          aria-haspopup="menu"
+          className="flex items-center gap-2 rounded-lg border border-borda bg-superficie px-3.5 py-2 text-sm font-medium capitalize text-texto transition hover:bg-superficie-2"
+        >
+          <CalendarRange size={15} aria-hidden className="text-texto-suave" />
+          {atual}
+          <ChevronDown size={15} aria-hidden className="text-texto-suave" />
+        </button>
+
+        {aberto && (
+          <div
+            role="menu"
+            className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-borda bg-superficie shadow-lg"
           >
-            {o.rotulo}
-          </button>
-        ))}
+            <ul className="py-1">
+              {lista.map((o) => {
+                const selecionado = !tudo && de === iso(o.de) && ate === iso(o.ate);
+                return (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => irPara({ de: iso(o.de), ate: iso(o.ate), periodo: null })}
+                      className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-texto transition hover:bg-superficie-2"
+                    >
+                      {o.rotulo}
+                      {selecionado && <Check size={14} className="text-primaria" />}
+                    </button>
+                  </li>
+                );
+              })}
+
+              <li>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => irPara({ periodo: "tudo", de: null, ate: null })}
+                  className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-texto transition hover:bg-superficie-2"
+                >
+                  Todo o período
+                  {tudo && <Check size={14} className="text-primaria" />}
+                </button>
+              </li>
+            </ul>
+
+            <div className="border-t border-borda">
+              {personalizando ? (
+                <div className="space-y-2 p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={inicio}
+                      onChange={(e) => setInicio(e.target.value)}
+                      aria-label="Data inicial"
+                      className={`${CAMPO} w-full`}
+                    />
+                    <span className="text-xs text-texto-suave">até</span>
+                    <input
+                      type="date"
+                      value={fim}
+                      onChange={(e) => setFim(e.target.value)}
+                      aria-label="Data final"
+                      className={`${CAMPO} w-full`}
+                    />
+                  </div>
+                  {erro ? (
+                    <p role="alert" className="text-xs text-alerta">
+                      {erro}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-texto-suave">Máximo de 3 meses.</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={aplicarPersonalizado}
+                    className="w-full rounded-lg bg-primaria px-3 py-2 text-sm font-semibold text-primaria-contraste transition hover:opacity-90"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => setPersonalizando(true)}
+                  className="w-full px-4 py-2.5 text-left text-sm font-medium text-primaria transition hover:bg-superficie-2"
+                >
+                  Personalizar…
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {(periodo === "personalizado" || abrirPersonalizado) && (
-        <div className="cartao space-y-2 p-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="space-y-1">
-              <span className="block text-xs text-texto-suave">De</span>
-              <input
-                type="date"
-                value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
-                className={CAMPO}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="block text-xs text-texto-suave">Até</span>
-              <input
-                type="date"
-                value={fim}
-                onChange={(e) => setFim(e.target.value)}
-                className={CAMPO}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={aplicarPersonalizado}
-              className="flex items-center gap-1.5 rounded-xl bg-primaria px-3.5 py-2 text-sm font-semibold text-primaria-contraste transition hover:opacity-90"
-            >
-              <CalendarRange size={15} aria-hidden />
-              Aplicar
-            </button>
-          </div>
-
-          {erro ? (
-            <p role="alert" className="text-xs text-alerta">
-              {erro}
-            </p>
-          ) : (
-            <p className="text-xs text-texto-suave">Máximo de 3 meses por consulta.</p>
-          )}
-        </div>
+      {ehMesFechado && (
+        <button
+          type="button"
+          onClick={() => passoMes(1)}
+          aria-label="Próximo mês"
+          className="grid size-9 place-items-center rounded-lg border border-borda text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+        >
+          <ChevronRight size={16} />
+        </button>
       )}
     </div>
   );
