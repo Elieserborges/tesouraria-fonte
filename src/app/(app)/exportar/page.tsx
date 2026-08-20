@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { OpcoesExportacao } from "@/components/exportar/opcoes-exportacao";
 import { listarTransacoes, somar } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
+import { contaNoSaldo } from "@/lib/types";
 import { janelaDaUrl } from "@/lib/periodo";
 import { SeletorPeriodo } from "@/components/relatorios/seletor-periodo";
 
@@ -12,7 +13,7 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
   const { tudo, de, ate, inicio, fim, rotulo } = janelaDaUrl(sp);
 
   const transacoes = await listarTransacoes({ inicio, fim, limite: 50000 });
-  const aprovadas = transacoes.filter((t) => t.status === "approved");
+  const aprovadas = transacoes.filter((t) => contaNoSaldo(t.status));
 
   const consulta = tudo ? "periodo=tudo" : `de=${de}&ate=${ate}`;
 

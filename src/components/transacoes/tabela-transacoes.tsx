@@ -3,7 +3,12 @@
 import { useState, useTransition } from "react";
 import { ArrowDownLeft, ArrowUpRight, Trash2, Wand2, Zap } from "lucide-react";
 import { formatarDataHora, formatarMoeda } from "@/lib/format";
-import { FORMA_LABEL, type Categoria, type TransacaoComRelacoes } from "@/lib/types";
+import {
+  aguardandoCaptura,
+  FORMA_LABEL,
+  type Categoria,
+  type TransacaoComRelacoes,
+} from "@/lib/types";
 import { atribuirCategoria, excluirTransacao } from "@/app/(app)/transacoes/actions";
 
 type Props = {
@@ -218,6 +223,19 @@ export function TabelaTransacoes({
                     }`}
                   >
                     {entrada ? "+" : "−"} {formatarMoeda(t.valor)}
+                    {/*
+                      Compra bloqueada no cartão: o valor já saiu do disponível,
+                      mas o lojista ainda não capturou. Some do extrato até lá,
+                      e pode voltar se a autorização expirar.
+                    */}
+                    {aguardandoCaptura(t.status) && (
+                      <span
+                        className="ml-1.5 align-middle text-[0.65rem] font-medium uppercase tracking-wide text-texto-suave"
+                        title="Compra no cartão já bloqueada, aguardando o lojista capturar."
+                      >
+                        bloqueado
+                      </span>
+                    )}
                   </td>
 
                   {!compacta && editavel && (

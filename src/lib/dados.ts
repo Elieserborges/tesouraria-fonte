@@ -1,5 +1,5 @@
 import { criarClienteServidor } from "@/lib/supabase/server";
-import { ehTransferencia } from "@/lib/types";
+import { contaNoSaldo, ehTransferencia } from "@/lib/types";
 import type {
   Categoria,
   Conta,
@@ -232,7 +232,7 @@ export async function contarSemCategoria(): Promise<number> {
 export function somar(transacoes: TransacaoComRelacoes[], tipo: TipoTransacao) {
   return transacoes
     .filter(
-      (t) => t.tipo === tipo && t.status === "approved" && !ehTransferencia(t),
+      (t) => t.tipo === tipo && contaNoSaldo(t.status) && !ehTransferencia(t),
     )
     .reduce((total, t) => total + t.valor, 0);
 }
@@ -247,7 +247,7 @@ export function somarTransferencias(
     .filter(
       (t) =>
         t.tipo === tipo &&
-        t.status === "approved" &&
+        contaNoSaldo(t.status) &&
         ehTransferencia(t) &&
         (!apenasContasDePagamento || !ehReserva(t.conta?.slug)),
     )
@@ -282,7 +282,7 @@ export function somarMovimentoBancario(
   tipo: TipoTransacao,
 ) {
   return transacoes
-    .filter((t) => t.tipo === tipo && t.status === "approved" && !ehReserva(t.conta?.slug))
+    .filter((t) => t.tipo === tipo && contaNoSaldo(t.status) && !ehReserva(t.conta?.slug))
     .reduce((total, t) => total + t.valor, 0);
 }
 
@@ -346,7 +346,7 @@ export function fluxoDoPeriodo(
   }
 
   for (const t of transacoes) {
-    if (t.status !== "approved" || ehTransferencia(t)) continue;
+    if (!contaNoSaldo(t.status) || ehTransferencia(t)) continue;
     const ponto = pontos.get(chave(new Date(t.ocorrido_em)));
     if (!ponto) continue;
     if (t.tipo === "entrada") ponto.entradas += t.valor;
@@ -380,7 +380,7 @@ export function resumoPorCategoria(
   const mapa = new Map<string, ResumoCategoria>();
 
   for (const t of transacoes) {
-    if (t.status !== "approved" || ehTransferencia(t)) continue;
+    if (!contaNoSaldo(t.status) || ehTransferencia(t)) continue;
 
     const nome = t.categoria?.nome ?? "Sem categoria";
     const atual =
@@ -416,7 +416,7 @@ export function porCategoria(
   const mapa = new Map<string, FatiaCategoria>();
 
   for (const t of transacoes) {
-    if (t.tipo !== tipo || t.status !== "approved" || ehTransferencia(t)) continue;
+    if (t.tipo !== tipo || !contaNoSaldo(t.status) || ehTransferencia(t)) continue;
     const nome = t.categoria?.nome ?? "Sem categoria";
     const cor = t.categoria?.cor ?? "#94A3B8";
     const atual = mapa.get(nome) ?? { nome, cor, valor: 0 };

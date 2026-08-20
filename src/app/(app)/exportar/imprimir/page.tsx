@@ -14,7 +14,7 @@ import {
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import { janelaDaUrl } from "@/lib/periodo";
 import { obterSessao } from "@/lib/supabase/server";
-import { ehTransferencia, FORMA_LABEL, type FormaPagamento } from "@/lib/types";
+import { contaNoSaldo, ehTransferencia, FORMA_LABEL, type FormaPagamento } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Relatório · Fluxx Finance" };
 
@@ -49,7 +49,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
   const saldosDeReserva = saldos.filter((c) => idsDeReserva.includes(c.conta_id));
   const totalReservado = saldosDeReserva.reduce((s, c) => s + c.saldo, 0);
 
-  const aprovadasReserva = reserva.filter((t) => t.status === "approved");
+  const aprovadasReserva = reserva.filter((t) => contaNoSaldo(t.status));
   const guardadoNoPeriodo = aprovadasReserva
     .filter((t) => t.tipo === "entrada" && ehTransferencia(t))
     .reduce((s, t) => s + t.valor, 0);
@@ -61,7 +61,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
     .reduce((s, t) => s + t.valor, 0);
 
   const resumo = resumoPorCategoria(transacoes);
-  const aprovadas = transacoes.filter((t) => t.status === "approved");
+  const aprovadas = transacoes.filter((t) => contaNoSaldo(t.status));
 
   const tempos = transacoes.map((t) => new Date(t.ocorrido_em).getTime());
   const fluxo = tempos.length

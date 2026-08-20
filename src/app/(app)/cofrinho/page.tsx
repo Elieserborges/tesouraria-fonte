@@ -5,7 +5,7 @@ import { CartaoMetrica } from "@/components/dashboard/cartao-metrica";
 import { TabelaTransacoes } from "@/components/transacoes/tabela-transacoes";
 import { listarCategorias, listarSaldosPorConta, listarTransacoes, idsDasContasDeReserva } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
-import { ehTransferencia } from "@/lib/types";
+import { contaNoSaldo, ehTransferencia } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Cofrinho · Fluxx Finance" };
 
@@ -34,13 +34,13 @@ export default async function PaginaCofrinho() {
   // As transferências são o vaivém com a conta corrente. O que sobra é
   // rendimento: nasceu dentro do cofrinho e nunca passou pelo caixa.
   const guardado = movimentos
-    .filter((t) => t.tipo === "entrada" && t.status === "approved" && ehTransferencia(t))
+    .filter((t) => t.tipo === "entrada" && contaNoSaldo(t.status) && ehTransferencia(t))
     .reduce((soma, t) => soma + t.valor, 0);
   const resgatado = movimentos
-    .filter((t) => t.tipo === "saida" && t.status === "approved" && ehTransferencia(t))
+    .filter((t) => t.tipo === "saida" && contaNoSaldo(t.status) && ehTransferencia(t))
     .reduce((soma, t) => soma + t.valor, 0);
   const rendimento = movimentos
-    .filter((t) => t.tipo === "entrada" && t.status === "approved" && !ehTransferencia(t))
+    .filter((t) => t.tipo === "entrada" && contaNoSaldo(t.status) && !ehTransferencia(t))
     .reduce((soma, t) => soma + t.valor, 0);
 
   return (

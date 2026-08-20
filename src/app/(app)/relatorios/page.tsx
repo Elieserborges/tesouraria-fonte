@@ -6,6 +6,7 @@ import { SeletorPeriodo } from "@/components/relatorios/seletor-periodo";
 import { mesCorrente, rotuloPeriodo } from "@/lib/periodo";
 import { listarTransacoes, resumoPorCategoria } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
+import { contaNoSaldo } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Relatórios · Fluxx Finance" };
 
@@ -42,7 +43,7 @@ export default async function PaginaRelatorios(props: PageProps<"/relatorios">) 
    * categorias.
    */
   const totalTarifas = transacoes.reduce(
-    (soma, t) => (t.status === "approved" ? soma + Number(t.tarifa ?? 0) : soma),
+    (soma, t) => (contaNoSaldo(t.status) ? soma + Number(t.tarifa ?? 0) : soma),
     0,
   );
   const totalBruto = totalEntradas + totalTarifas;

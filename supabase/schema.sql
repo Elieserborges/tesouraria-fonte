@@ -516,7 +516,7 @@ left join public.categorias c
   on c.nome = e.categoria_nome
 left join public.transacoes t
   on t.categoria_id = c.id
- and t.status = 'approved'
+ and t.status in ('approved', 'authorized')
  and t.ocorrido_em >= e.inicio::timestamptz
  and t.ocorrido_em < (e.fim + 1)::timestamptz
 group by e.id, e.nome, e.categoria_nome, e.inicio, e.fim, e.observacao;
@@ -584,6 +584,18 @@ create policy "webhooks: leitura" on public.webhook_eventos
 -- =============================================================
 -- Views de apoio (security_invoker = respeitam o RLS de quem consulta)
 -- =============================================================
+/*
+ * O saldo conta os aprovados e os autorizados.
+ *
+ * "authorized" é a compra no cartão que o lojista ainda não capturou. O valor
+ * já está bloqueado — some do disponível na hora, como o próprio aplicativo do
+ * Mercado Pago mostra — mas a linha só entra no extrato quando a captura
+ * acontece, dias depois. Contando só "approved", o sistema exibia como
+ * disponível um dinheiro que a igreja já não podia gastar.
+ *
+ * Uma autorização pode expirar sem captura, e aí o dinheiro volta. O cron
+ * revisita esses lançamentos até chegarem a um estado final.
+ */
 create or replace view public.saldo_por_conta
 with (security_invoker = on) as
 select
@@ -595,7 +607,7 @@ select
   coalesce(sum(case when t.tipo = 'entrada' then t.valor else -t.valor end), 0)::numeric as saldo
 from public.contas c
 left join public.transacoes t
-  on t.conta_id = c.id and t.status = 'approved'
+  on t.conta_id = c.id and t.status in ('approved', 'authorized')
 where c.ativa
 group by c.id, c.nome, c.cor;
 

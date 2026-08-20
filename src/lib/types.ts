@@ -167,6 +167,32 @@ export type TransacaoComRelacoes = Transacao & {
   categoria: Pick<Categoria, "id" | "nome" | "cor" | "eh_transferencia"> | null;
 };
 
+/*
+ * Status que mexem no dinheiro.
+ *
+ * `approved` é o pagamento concluído. `authorized` é a compra no cartão que
+ * ainda não foi capturada pelo lojista: o valor já está bloqueado e some do
+ * saldo disponível, mas a linha só aparece no extrato quando a captura
+ * acontece, dias depois.
+ *
+ * Contar só o `approved` fazia o sistema mostrar dinheiro que a igreja já não
+ * podia gastar. Contar os dois é o que o próprio aplicativo do Mercado Pago
+ * faz no "Disponível".
+ *
+ * Uma autorização pode expirar sem captura, e aí o dinheiro volta — por isso
+ * o cron revisita esses lançamentos até eles chegarem a um estado final.
+ */
+export const STATUS_NO_SALDO = ["approved", "authorized"] as const;
+
+export function contaNoSaldo(status: string): boolean {
+  return (STATUS_NO_SALDO as readonly string[]).includes(status);
+}
+
+/** Compra bloqueada no cartão, ainda sem captura. */
+export function aguardandoCaptura(status: string): boolean {
+  return status === "authorized";
+}
+
 /** Movimento que só troca dinheiro de conta — não é receita nem despesa. */
 export function ehTransferencia(t: TransacaoComRelacoes): boolean {
   return t.categoria?.eh_transferencia === true;
