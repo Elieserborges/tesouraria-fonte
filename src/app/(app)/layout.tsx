@@ -24,7 +24,9 @@ export default async function LayoutApp({
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
       {/* Barra lateral */}
-      <aside className="flex shrink-0 flex-col gap-6 border-b border-borda bg-superficie p-4 lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r lg:p-6">
+      {/* Menu e rodapé somem no PDF: o relatório impresso é o documento,
+          não uma captura da tela do sistema. */}
+      <aside className="nao-imprimir flex shrink-0 flex-col gap-6 border-b border-borda bg-superficie p-4 lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r lg:p-6">
         <div className="flex items-center justify-between">
           <Logo className="text-texto" />
           <div className="flex gap-2 lg:hidden">
@@ -60,12 +62,12 @@ export default async function LayoutApp({
         </div>
       </aside>
 
-      <main className="flex-1 p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 print:p-0">
         <div className="mx-auto w-full max-w-7xl">{children}</div>
       </main>
 
       {/* Rodapé de sessão no mobile */}
-      <div className="border-t border-borda bg-superficie p-4 lg:hidden">
+      <div className="nao-imprimir border-t border-borda bg-superficie p-4 lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-texto">{nome}</p>

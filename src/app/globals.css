@@ -149,6 +149,11 @@ body {
     display: none !important;
   }
 
+  /* Sem o menu, o conteúdo ocupa a folha inteira. */
+  body > div {
+    display: block !important;
+  }
+
   .cartao {
     border-radius: 0.5rem;
     box-shadow: none;
