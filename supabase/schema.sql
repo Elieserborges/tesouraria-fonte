@@ -450,6 +450,78 @@ end;
 $$;
 
 -- -------------------------------------------------------------
+-- Edições de evento
+--
+-- Face a Face acontece 3x por ano para homens e 3x para mulheres;
+-- Cura-me, 1x. Criar uma categoria por edição encheria o cadastro de 14
+-- categorias novas por ano — em três anos, de 26 para 68.
+--
+-- Aqui a categoria continua sendo o tipo do evento ("Face a Face") e a
+-- EDIÇÃO é um registro com janela de datas. Cada transação daquela
+-- categoria dentro da janela pertence àquela edição, sem ninguém precisar
+-- marcar lançamento por lançamento.
+--
+-- A regra que isso impõe: duas edições da mesma categoria não podem ter
+-- janelas sobrepostas. Com meses de intervalo entre elas, não é limitação
+-- na prática.
+-- -------------------------------------------------------------
+create table if not exists public.eventos (
+  id             uuid primary key default gen_random_uuid(),
+  nome           text not null,
+  categoria_nome text not null,
+  inicio         date not null,
+  fim            date not null,
+  observacao     text,
+  criado_por     uuid references auth.users (id) on delete set null,
+  criado_em      timestamptz not null default now(),
+  constraint eventos_janela_valida check (fim >= inicio)
+);
+
+create index if not exists eventos_categoria_idx on public.eventos (categoria_nome);
+
+alter table public.eventos enable row level security;
+
+drop policy if exists "eventos: leitura" on public.eventos;
+create policy "eventos: leitura" on public.eventos
+  for select to authenticated using (true);
+
+drop policy if exists "eventos: escrita" on public.eventos;
+create policy "eventos: escrita" on public.eventos
+  for all to authenticated
+  using (public.pode_editar()) with check (public.pode_editar());
+
+/*
+ * Arrecadação, despesa e resultado de cada edição.
+ *
+ * A ligação é pela categoria + janela de datas, calculada na hora: mudar
+ * as datas da edição corrige os números na mesma consulta, sem precisar
+ * reprocessar transação nenhuma.
+ */
+create or replace view public.resultado_por_evento
+with (security_invoker = on) as
+select
+  e.id                                                                as evento_id,
+  e.nome,
+  e.categoria_nome,
+  e.inicio,
+  e.fim,
+  e.observacao,
+  coalesce(sum(t.valor) filter (where t.tipo = 'entrada'), 0)::numeric as entradas,
+  coalesce(sum(t.valor) filter (where t.tipo = 'saida'), 0)::numeric   as saidas,
+  coalesce(sum(case when t.tipo = 'entrada' then t.valor else -t.valor end), 0)::numeric
+                                                                      as resultado,
+  count(t.id)                                                         as lancamentos
+from public.eventos e
+left join public.categorias c
+  on c.nome = e.categoria_nome
+left join public.transacoes t
+  on t.categoria_id = c.id
+ and t.status = 'approved'
+ and t.ocorrido_em >= e.inicio::timestamptz
+ and t.ocorrido_em < (e.fim + 1)::timestamptz
+group by e.id, e.nome, e.categoria_nome, e.inicio, e.fim, e.observacao;
+
+-- -------------------------------------------------------------
 -- Log de webhooks (auditoria + idempotência)
 -- -------------------------------------------------------------
 create table if not exists public.webhook_eventos (

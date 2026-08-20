@@ -3,6 +3,7 @@ import { ehTransferencia } from "@/lib/types";
 import type {
   Categoria,
   Conta,
+  EventoComResultado,
   RegraComUso,
   TipoTransacao,
   TransacaoComRelacoes,
@@ -148,6 +149,23 @@ export async function listarRegras(): Promise<RegraComUso[]> {
       return { ...r, atingidas: count ?? 0 };
     }),
   );
+}
+
+/** Edições cadastradas, com arrecadação e despesa de cada uma. */
+export async function listarEventos(): Promise<EventoComResultado[]> {
+  const supabase = await criarClienteServidor();
+  const { data } = await supabase
+    .from("resultado_por_evento")
+    .select("evento_id, nome, categoria_nome, inicio, fim, observacao, entradas, saidas, resultado, lancamentos")
+    .order("inicio", { ascending: false });
+
+  return ((data ?? []) as EventoComResultado[]).map((e) => ({
+    ...e,
+    entradas: Number(e.entradas),
+    saidas: Number(e.saidas),
+    resultado: Number(e.resultado),
+    lancamentos: Number(e.lancamentos),
+  }));
 }
 
 export async function contarSemCategoria(): Promise<number> {

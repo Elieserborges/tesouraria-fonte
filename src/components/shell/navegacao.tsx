@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  CalendarRange,
   ChartColumn,
   Tags,
   Users,
@@ -14,6 +15,7 @@ const ITENS = [
   { href: "/dashboard", rotulo: "Visão geral", Icone: LayoutDashboard, soAdmin: false },
   { href: "/transacoes", rotulo: "Transações", Icone: ArrowLeftRight, soAdmin: false },
   { href: "/relatorios", rotulo: "Relatórios", Icone: ChartColumn, soAdmin: false },
+  { href: "/eventos", rotulo: "Eventos", Icone: CalendarRange, soAdmin: false },
   { href: "/categorias", rotulo: "Categorias", Icone: Tags, soAdmin: false },
   { href: "/usuarios", rotulo: "Usuários", Icone: Users, soAdmin: true },
 ] as const;

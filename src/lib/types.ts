@@ -187,6 +187,25 @@ export const PAPEL_DESCRICAO: Record<PapelUsuario, string> = {
   conselho: "Somente leitura dos painéis e transações.",
 };
 
+/** Edição de um evento recorrente — Face a Face Ago/2026, Cura-me 2026… */
+export type Evento = {
+  id: string;
+  nome: string;
+  categoria_nome: string;
+  inicio: string;
+  fim: string;
+  observacao: string | null;
+};
+
+/** Edição com o que ela arrecadou e gastou, calculado pela janela de datas. */
+export type EventoComResultado = Omit<Evento, "id"> & {
+  evento_id: string;
+  entradas: number;
+  saidas: number;
+  resultado: number;
+  lancamentos: number;
+};
+
 /** Usuário do Auth combinado com o perfil de acesso. */
 export type UsuarioGerenciado = {
   id: string;
