@@ -1,5 +1,5 @@
 import { criarClienteServidor } from "@/lib/supabase/server";
-import { contaNoSaldo, ehTransferencia } from "@/lib/types";
+import { contaNoSaldo, ehTransferencia, STATUS_NO_SALDO } from "@/lib/types";
 import type {
   Categoria,
   Conta,
@@ -159,6 +159,85 @@ export async function listarTransacoes(
   }
 
   return linhas.map((t) => ({ ...t, valor: Number(t.valor) }));
+}
+
+export type TaxaObservada = {
+  chave: string;
+  forma: string;
+  tipoPagamento: string;
+  taxa: number;
+  recebimentos: number;
+  bruto: number;
+};
+
+/**
+ * O que cada meio de pagamento cobrou de verdade nesta conta.
+ *
+ * A `forma` sozinha não basta: dentro do checkout convivem o Pix, que custa
+ * cerca de 1%, e o cartão de crédito, que custa perto de 5%. Uma média entre
+ * os dois daria um número que não corresponde a nenhuma cobrança real e
+ * levaria ao preço errado na hora de definir um ingresso.
+ *
+ * Só o `payment_type_id` sai do payload — puxar o objeto inteiro para milhares
+ * de linhas seria caro para uma soma de duas colunas.
+ */
+export async function taxasObservadas(): Promise<TaxaObservada[]> {
+  const supabase = await criarClienteServidor();
+  const idsDeReserva = await idsDasContasDeReserva();
+
+  type Linha = {
+    forma: string | null;
+    valor_bruto: number | null;
+    tarifa: number | null;
+    tipo_pagamento: string | null;
+  };
+
+  const linhas: Linha[] = [];
+  for (let de = 0; ; de += MAX_POR_REQUISICAO) {
+    let consulta = supabase
+      .from("transacoes")
+      .select("forma, valor_bruto, tarifa, tipo_pagamento:payload->>payment_type_id")
+      .eq("tipo", "entrada")
+      .in("status", [...STATUS_NO_SALDO])
+      .gt("valor_bruto", 0)
+      .not("forma", "is", null);
+
+    if (idsDeReserva.length > 0) {
+      consulta = consulta.or(
+        `conta_id.is.null,conta_id.not.in.(${idsDeReserva.join(",")})`,
+      );
+    }
+
+    const { data, error } = await consulta.range(de, de + MAX_POR_REQUISICAO - 1);
+    if (error) throw new Error(error.message);
+    if (!data?.length) break;
+    linhas.push(...(data as unknown as Linha[]));
+    if (data.length < MAX_POR_REQUISICAO) break;
+  }
+
+  const grupos = new Map<string, { tarifas: number; bruto: number; n: number }>();
+  for (const l of linhas) {
+    if (!l.forma) continue;
+    const tipo = l.tipo_pagamento ?? "-";
+    const chave = `${l.forma}:${tipo}`;
+    const g = grupos.get(chave) ?? { tarifas: 0, bruto: 0, n: 0 };
+    g.tarifas += Number(l.tarifa ?? 0);
+    g.bruto += Number(l.valor_bruto ?? 0);
+    g.n += 1;
+    grupos.set(chave, g);
+  }
+
+  return [...grupos.entries()].map(([chave, g]) => {
+    const [forma, tipoPagamento] = chave.split(":");
+    return {
+      chave,
+      forma,
+      tipoPagamento,
+      taxa: Number(((g.tarifas / g.bruto) * 100).toFixed(2)),
+      recebimentos: g.n,
+      bruto: g.bruto,
+    };
+  });
 }
 
 /** Regras de categorização, com quantas transações cada uma alcança hoje. */

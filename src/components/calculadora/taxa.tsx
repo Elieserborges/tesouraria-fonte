@@ -5,10 +5,11 @@ import { ArrowRight } from "lucide-react";
 import { formatarMoeda } from "@/lib/format";
 
 export type OpcaoDeTaxa = {
-  forma: string;
+  chave: string;
   rotulo: string;
   taxa: number;
   recebimentos: number;
+  bruto: number;
 };
 
 /**
@@ -20,16 +21,16 @@ export type OpcaoDeTaxa = {
  * a taxa — é preciso dividir por (1 − taxa).
  *
  * As taxas não são decoradas: vêm do que esta conta pagou de verdade em cada
- * forma de pagamento. A diferença entre elas é grande (Pix direto não cobra
- * nada, link de pagamento cobra quase 3%), então uma média só levaria a
- * decisão errada.
+ * caminho. E o caminho importa mais que a forma — o mesmo Pix não cobra nada
+ * na chave e cobra cerca de 1% pelo link de pagamento. Uma média entre os dois
+ * levaria a decisão errada.
  */
 export function Taxa({ opcoes }: { opcoes: OpcaoDeTaxa[] }) {
-  const [escolhida, setEscolhida] = useState(opcoes[0]?.forma ?? "");
+  const [escolhida, setEscolhida] = useState(opcoes[0]?.chave ?? "");
   const [texto, setTexto] = useState("");
   const [personalizada, setPersonalizada] = useState<string | null>(null);
 
-  const opcao = opcoes.find((o) => o.forma === escolhida);
+  const opcao = opcoes.find((o) => o.chave === escolhida);
 
   function numero(valor: string): number {
     const limpo = valor.trim().replace(/\s/g, "").replace(/^R\$/i, "");
@@ -62,16 +63,16 @@ export function Taxa({ opcoes }: { opcoes: OpcaoDeTaxa[] }) {
       <div className="flex flex-wrap gap-1.5 border-b border-borda px-5 py-3">
         {opcoes.map((o) => (
           <button
-            key={o.forma}
+            key={o.chave}
             type="button"
             onClick={() => {
-              setEscolhida(o.forma);
+              setEscolhida(o.chave);
               setPersonalizada(null);
             }}
-            aria-pressed={personalizada === null && escolhida === o.forma}
+            aria-pressed={personalizada === null && escolhida === o.chave}
             title={`Média de ${o.recebimentos} recebimentos`}
             className={`rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
-              personalizada === null && escolhida === o.forma
+              personalizada === null && escolhida === o.chave
                 ? "bg-marca-500 text-white"
                 : "bg-superficie-2 text-texto-suave hover:text-texto"
             }`}

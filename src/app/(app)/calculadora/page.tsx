@@ -1,13 +1,33 @@
 import type { Metadata } from "next";
 import { Fita } from "@/components/calculadora/fita";
 import { Taxa, type OpcaoDeTaxa } from "@/components/calculadora/taxa";
-import { listarTransacoes } from "@/lib/dados";
-import { contaNoSaldo, FORMA_LABEL, type FormaPagamento } from "@/lib/types";
+import { taxasObservadas } from "@/lib/dados";
 
 export const metadata: Metadata = { title: "Calculadora · Fluxx Finance" };
 
 /** Abaixo disso a média não diz nada — é ruído de meia dúzia de casos. */
 const MINIMO_PARA_MEDIA = 10;
+
+/*
+ * Nome de cada combinação de forma e meio de pagamento.
+ *
+ * "Checkout / bank_transfer" é o Pix pago pelo link de pagamento, que cobra
+ * tarifa — diferente do Pix feito direto na chave, que não cobra nada. Chamar
+ * os dois de "Pix" faria a pessoa escolher o preço errado, então o rótulo diz
+ * por onde o dinheiro entrou.
+ */
+const ROTULOS: Record<string, string> = {
+  "pix:bank_transfer": "Pix na chave",
+  "qr_presencial:bank_transfer": "QR no culto",
+  "qr_presencial:account_money": "QR no culto (saldo)",
+  "checkout:bank_transfer": "Link — Pix",
+  "checkout:credit_card": "Link — crédito",
+  "checkout:debit_card": "Link — débito",
+  "checkout:account_money": "Link — saldo MP",
+  "maquininha:debit_card": "Maquininha — débito",
+  "maquininha:credit_card": "Maquininha — crédito",
+  "maquininha:prepaid_card": "Maquininha — pré-pago",
+};
 
 /**
  * As duas contas que a tesouraria faz fora do sistema.
@@ -17,38 +37,18 @@ const MINIMO_PARA_MEDIA = 10;
  * mão. Trazer para cá evita o erro de digitação no meio do caminho.
  */
 export default async function PaginaCalculadora() {
-  /*
-   * As taxas saem do histórico, não de um número decorado.
-   *
-   * Cada forma de pagamento cobra o seu, e a diferença é grande: o Pix
-   * recebido direto não cobra nada, o link de pagamento cobra quase 3%. Uma
-   * média única entre elas levaria a decisão errada na hora de definir o
-   * preço de um ingresso.
-   */
-  const transacoes = await listarTransacoes({ limite: 20000 });
+  const observadas = await taxasObservadas();
 
-  const porForma = new Map<string, { tarifas: number; brutos: number; n: number }>();
-  for (const t of transacoes) {
-    if (t.tipo !== "entrada" || !contaNoSaldo(t.status) || !t.forma) continue;
-    const bruto = Number(t.valor_bruto ?? 0);
-    if (bruto <= 0) continue;
-
-    const acumulado = porForma.get(t.forma) ?? { tarifas: 0, brutos: 0, n: 0 };
-    acumulado.tarifas += Number(t.tarifa ?? 0);
-    acumulado.brutos += bruto;
-    acumulado.n += 1;
-    porForma.set(t.forma, acumulado);
-  }
-
-  const opcoes: OpcaoDeTaxa[] = [...porForma.entries()]
-    .filter(([forma, v]) => v.n >= MINIMO_PARA_MEDIA && forma !== "cofrinho")
-    .map(([forma, v]) => ({
-      forma,
-      rotulo: FORMA_LABEL[forma as FormaPagamento] ?? forma,
-      taxa: Number(((v.tarifas / v.brutos) * 100).toFixed(2)),
-      recebimentos: v.n,
+  const opcoes: OpcaoDeTaxa[] = observadas
+    .filter((o) => o.recebimentos >= MINIMO_PARA_MEDIA && ROTULOS[o.chave])
+    .map((o) => ({
+      chave: o.chave,
+      rotulo: ROTULOS[o.chave],
+      taxa: o.taxa,
+      recebimentos: o.recebimentos,
+      bruto: o.bruto,
     }))
-    // Da mais cara para a mais barata: é a ordem em que a pergunta aparece.
+    // Da mais cara para a mais barata: a pergunta costuma ser "quanto perco".
     .sort((a, b) => b.taxa - a.taxa);
 
   return (
@@ -67,8 +67,10 @@ export default async function PaginaCalculadora() {
             <>
               <Taxa opcoes={opcoes} />
               <p className="px-1 text-xs leading-relaxed text-texto-suave">
-                As taxas são a média real desta conta, não a tabela do Mercado Pago.
-                Dá para digitar outra se estiver simulando.
+                Cada linha é a média real desta conta, não a tabela do Mercado Pago.
+                Repare que o Pix feito direto na chave não cobra nada, mas o mesmo
+                Pix pago pelo link tem tarifa — é a mesma forma de pagar por
+                caminhos diferentes.
               </p>
             </>
           ) : (
