@@ -2,27 +2,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { GraficoPorCategoria } from "@/components/relatorios/grafico-por-categoria";
-import {
-  SeletorPeriodo,
-  rotuloPeriodo,
-} from "@/components/relatorios/seletor-periodo";
+import { SeletorPeriodo } from "@/components/relatorios/seletor-periodo";
+import { mesCorrente, rotuloPeriodo } from "@/lib/periodo";
 import { listarTransacoes, resumoPorCategoria } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Relatórios · Fluxx Finance" };
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Primeiro e último dia do mês corrente, no fuso local. */
-function mesCorrente() {
-  const h = new Date();
-  const p = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return {
-    de: p(new Date(h.getFullYear(), h.getMonth(), 1)),
-    ate: p(new Date(h.getFullYear(), h.getMonth() + 1, 0)),
-  };
-}
 
 export default async function PaginaRelatorios(props: PageProps<"/relatorios">) {
   const sp = await props.searchParams;
