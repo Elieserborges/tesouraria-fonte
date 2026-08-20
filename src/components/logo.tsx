@@ -14,7 +14,9 @@ export function Logo({
   tamanho?: "normal" | "grande";
 }) {
   const escala = tamanho === "grande" ? "text-3xl" : "text-xl";
-  const legenda = tamanho === "grande" ? "text-[0.6rem]" : "text-[0.5rem]";
+  // A legenda acompanha a proporção do wordmark (40% do corpo), senão um
+  // único valor de tracking não serve para os dois tamanhos.
+  const legenda = tamanho === "grande" ? "text-[0.75rem]" : "text-[0.5rem]";
 
   return (
     <div className={`inline-flex flex-col leading-none ${className}`}>
@@ -31,9 +33,15 @@ export function Logo({
         </span>
         <span aria-hidden>uxx</span>
       </span>
+      {/*
+        A legenda encosta na palavra: `leading-none` no wordmark já deixa
+        pouco espaço, e uma margem grande fazia os dois parecerem elementos
+        separados. O tracking é calculado para a legenda ficar da largura
+        aproximada de "Fluxx" — é isso que faz o conjunto ler como uma marca.
+      */}
       <span
         aria-hidden
-        className={`${legenda} mt-1.5 font-medium uppercase tracking-[0.42em] opacity-60`}
+        className={`${legenda} mt-px font-medium uppercase tracking-[0.44em] opacity-60`}
       >
         Finance
       </span>
