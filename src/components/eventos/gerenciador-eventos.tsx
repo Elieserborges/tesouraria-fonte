@@ -217,74 +217,104 @@ export function GerenciadorEventos({
           const totalEntradas = edicoes.reduce((s, e) => s + e.entradas, 0);
           const totalSaidas = edicoes.reduce((s, e) => s + e.saidas, 0);
 
+          const total = totalEntradas - totalSaidas;
+
           return (
             <section key={categoria} className="cartao overflow-hidden">
-              <header className="flex flex-wrap items-center justify-between gap-3 border-b border-borda px-5 py-4">
+              <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-borda px-5 py-4">
                 <h2 className="text-sm font-semibold text-texto">{categoria}</h2>
-                <p className="valor-sensivel text-xs text-texto-suave">
-                  {edicoes.length} edição{edicoes.length === 1 ? "" : "ões"} ·{" "}
-                  <span className="text-entrada">{formatarMoeda(totalEntradas)}</span> ·{" "}
-                  <span className="text-saida">{formatarMoeda(totalSaidas)}</span> ·{" "}
+                <p className="text-xs text-texto-suave">
+                  {edicoes.length} {edicoes.length === 1 ? "edição" : "edições"} ·
+                  resultado somado{" "}
                   <strong
-                    className={
-                      totalEntradas - totalSaidas >= 0 ? "text-entrada" : "text-saida"
-                    }
+                    className={`valor-sensivel tabular-nums ${
+                      total >= 0 ? "text-entrada" : "text-saida"
+                    }`}
                   >
-                    {formatarMoeda(totalEntradas - totalSaidas)}
+                    {formatarMoeda(total)}
                   </strong>
                 </p>
               </header>
 
-              <ul>
-                {edicoes.map((e) => (
-                  <li
-                    key={e.evento_id}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-borda/60 px-5 py-4 last:border-0"
-                  >
-                    <span className="min-w-52 flex-1">
-                      <span className="block text-sm font-medium text-texto">{e.nome}</span>
-                      <span className="block text-xs text-texto-suave">
-                        {formatarData(new Date(`${e.inicio}T12:00:00`))} a{" "}
-                        {formatarData(new Date(`${e.fim}T12:00:00`))} · {e.lancamentos}{" "}
-                        lançamento{e.lancamentos === 1 ? "" : "s"}
-                        {e.observacao ? ` · ${e.observacao}` : ""}
-                      </span>
-                    </span>
-
-                    <span className="valor-sensivel flex gap-4 text-sm tabular-nums">
-                      <span className="text-entrada">{formatarMoeda(e.entradas)}</span>
-                      <span className="text-saida">{formatarMoeda(e.saidas)}</span>
-                      <strong className={e.resultado >= 0 ? "text-entrada" : "text-saida"}>
-                        {formatarMoeda(e.resultado)}
-                      </strong>
-                    </span>
-
-                    {editavel && (
-                      <span className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCriando(false);
-                            setEditando(e.evento_id);
-                          }}
-                          aria-label={`Editar ${e.nome}`}
-                          className="rounded-lg p-1.5 text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[44rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-borda text-left text-xs uppercase tracking-wider text-texto-suave">
+                      <th className="px-5 py-3 font-medium">Edição</th>
+                      <th className="px-5 py-3 font-medium">Janela</th>
+                      <th className="px-5 py-3 text-right font-medium">Lanç.</th>
+                      <th className="px-5 py-3 text-right font-medium">Entradas</th>
+                      <th className="px-5 py-3 text-right font-medium">Saídas</th>
+                      <th className="px-5 py-3 text-right font-medium">Resultado</th>
+                      {editavel && <th className="w-20 px-5 py-3" />}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {edicoes.map((e) => (
+                      <tr
+                        key={e.evento_id}
+                        className="border-b border-borda/60 last:border-0 hover:bg-superficie-2/60"
+                      >
+                        <td className="w-full max-w-0 px-5 py-3">
+                          <span className="block truncate font-medium text-texto">
+                            {e.nome}
+                          </span>
+                          {e.observacao && (
+                            <span className="block truncate text-xs text-texto-suave">
+                              {e.observacao}
+                            </span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3 text-xs text-texto-suave tabular-nums">
+                          {formatarData(new Date(`${e.inicio}T12:00:00`))} a{" "}
+                          {formatarData(new Date(`${e.fim}T12:00:00`))}
+                        </td>
+                        <td className="px-5 py-3 text-right tabular-nums text-texto-suave">
+                          {e.lancamentos}
+                        </td>
+                        <td className="valor-sensivel whitespace-nowrap px-5 py-3 text-right tabular-nums text-entrada">
+                          {e.entradas ? formatarMoeda(e.entradas) : "—"}
+                        </td>
+                        <td className="valor-sensivel whitespace-nowrap px-5 py-3 text-right tabular-nums text-saida">
+                          {e.saidas ? formatarMoeda(e.saidas) : "—"}
+                        </td>
+                        <td
+                          className={`valor-sensivel whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums ${
+                            e.resultado >= 0 ? "text-entrada" : "text-saida"
+                          }`}
                         >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remover(e)}
-                          aria-label={`Excluir ${e.nome}`}
-                          className="rounded-lg p-1.5 text-texto-suave transition hover:bg-alerta/10 hover:text-alerta"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                          {formatarMoeda(e.resultado)}
+                        </td>
+                        {editavel && (
+                          <td className="px-5 py-3">
+                            <span className="flex justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCriando(false);
+                                  setEditando(e.evento_id);
+                                }}
+                                aria-label={`Editar ${e.nome}`}
+                                className="rounded-lg p-1.5 text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+                              >
+                                <Pencil size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => remover(e)}
+                                aria-label={`Excluir ${e.nome}`}
+                                className="rounded-lg p-1.5 text-texto-suave transition hover:bg-alerta/10 hover:text-alerta"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           );
         })

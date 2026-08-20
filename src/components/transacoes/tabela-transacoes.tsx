@@ -47,9 +47,10 @@ export function TabelaTransacoes({
         );
       } else if (r.tambem && r.tambem > 0) {
         setAviso(
-          `${r.tambem} transação${r.tambem === 1 ? "" : "ões"} com a mesma descrição ` +
-            `também foi${r.tambem === 1 ? "" : "ram"} categorizada${r.tambem === 1 ? "" : "s"}. ` +
-            "A regra vale para as próximas.",
+          r.tambem === 1
+            ? "Outra transação com a mesma descrição também foi categorizada. A regra vale para as próximas."
+            : `${r.tambem} transações com a mesma descrição também foram categorizadas. ` +
+              "A regra vale para as próximas.",
         );
       }
     });

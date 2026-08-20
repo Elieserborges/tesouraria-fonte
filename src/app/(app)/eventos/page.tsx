@@ -22,11 +22,9 @@ export default async function PaginaEventos() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-texto">Eventos</h1>
-        <p className="max-w-3xl text-sm text-texto-suave">
-          Cada edição tem uma janela de datas. Toda transação da categoria dentro
-          dessa janela entra na edição — sem precisar marcar lançamento por
-          lançamento. É o que separa o Face a Face de agosto do de abril sem criar
-          uma categoria nova a cada vez.
+        <p className="max-w-2xl text-sm text-texto-suave">
+          Cada edição tem uma janela de datas: toda transação da categoria dentro
+          dela entra na edição, sem marcar lançamento por lançamento.
         </p>
       </header>
 

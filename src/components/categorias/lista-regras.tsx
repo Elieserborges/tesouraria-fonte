@@ -193,7 +193,7 @@ export function ListaRegras({
                   <span className="text-xs text-texto-suave">
                     {CAMPO_LABEL[r.campo]} ·{" "}
                     {r.modo === "contem" ? "contém" : "idêntica"} · {r.atingidas}{" "}
-                    transação{r.atingidas === 1 ? "" : "ões"}
+                    {r.atingidas === 1 ? "transação" : "transações"}
                   </span>
                 </span>
 
