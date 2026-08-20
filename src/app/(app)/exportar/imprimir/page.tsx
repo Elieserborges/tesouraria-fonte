@@ -128,18 +128,32 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           ))}
         </div>
 
-        <p className="mt-2 text-xs leading-relaxed text-texto-suave">
-          O <strong>resultado</strong> é a diferença entre entradas e saídas do
-          período. O <strong>saldo atual</strong> é o que existe hoje nas contas,
-          somando todo o histórico — por isso os dois não coincidem.
+        {/*
+          Uma linha por número, em vez de um parágrafo corrido.
+
+          Quem lê o relatório impresso quer conferir, não estudar. Em lista,
+          cada definição fica ao lado do valor que explica e a pessoa acha a
+          que precisa sem reler o resto.
+        */}
+        <dl className="mt-2 space-y-0.5 text-xs text-texto-suave">
+          <div className="flex gap-1.5">
+            <dt className="font-semibold text-texto">Resultado:</dt>
+            <dd>entradas menos saídas do período.</dd>
+          </div>
+          <div className="flex gap-1.5">
+            <dt className="font-semibold text-texto">Saldo atual:</dt>
+            <dd>o que há na conta hoje, somando todo o histórico.</dd>
+          </div>
           {transferido > 0 && (
-            <>
-              {" "}Ficaram de fora {formatarMoeda(transferido)} em transferências
-              entre contas da própria igreja, que mudam o saldo de cada conta mas
-              não são receita nem despesa.
-            </>
+            <div className="flex gap-1.5">
+              <dt className="font-semibold text-texto">Fora da conta:</dt>
+              <dd>
+                {formatarMoeda(transferido)} que só mudaram de lugar — não são
+                receita nem despesa.
+              </dd>
+            </div>
           )}
-        </p>
+        </dl>
       </section>
 
       {/* Por categoria */}
