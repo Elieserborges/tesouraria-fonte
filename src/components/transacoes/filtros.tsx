@@ -99,12 +99,30 @@ export function Filtros({
         className={CLASSE_CAMPO}
       >
         <option value="">Todas as categorias</option>
-        <option value="sem-categoria">⚠ Sem categoria</option>
-        {categorias.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.tipo === "entrada" ? "↓" : "↑"} {c.nome}
-          </option>
-        ))}
+        <option value="sem-categoria" style={{ color: "var(--color-atencao)" }}>
+          ⚠ Sem categoria
+        </option>
+
+        {/*
+          Agrupar em Entradas/Saídas é o que funciona em qualquer navegador.
+          A cor no <option> é um reforço: Chrome e Firefox respeitam, Safari
+          ignora — e aí o agrupamento e a seta seguram a leitura sozinhos.
+        */}
+        {(["entrada", "saida"] as const).map((tipo) => {
+          const doTipo = categorias.filter((c) => c.tipo === tipo);
+          if (doTipo.length === 0) return null;
+
+          const cor = tipo === "entrada" ? "var(--entrada)" : "var(--saida)";
+          return (
+            <optgroup key={tipo} label={tipo === "entrada" ? "Entradas" : "Saídas"}>
+              {doTipo.map((c) => (
+                <option key={c.id} value={c.id} style={{ color: cor }}>
+                  {tipo === "entrada" ? "↓" : "↑"} {c.nome}
+                </option>
+              ))}
+            </optgroup>
+          );
+        })}
       </select>
 
       {temFiltro && (
