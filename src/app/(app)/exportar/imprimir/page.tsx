@@ -9,7 +9,6 @@ import {
   listarTransacoes,
   resumoPorCategoria,
   somar,
-  somarTransferencias,
 } from "@/lib/dados";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import { janelaDaUrl } from "@/lib/periodo";
@@ -40,8 +39,6 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
   const entradas = somar(transacoes, "entrada");
   const saidas = somar(transacoes, "saida");
   const resultado = entradas - saidas;
-  const transferido =
-    somarTransferencias(transacoes, "saida") + somarTransferencias(transacoes, "entrada");
   // A reserva fica fora do saldo: não é caixa, e somar os dois daria um
   // disponível que a igreja não tem. Ela ganha um bloco só dela mais abaixo.
   const saldoTotal = saldos
@@ -146,15 +143,12 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
             <dt className="font-semibold text-texto">Saldo atual:</dt>
             <dd>o que há na conta hoje, somando todo o histórico.</dd>
           </div>
-          {transferido > 0 && (
-            <div className="flex gap-1.5">
-              <dt className="font-semibold text-texto">Fora da conta:</dt>
-              <dd>
-                {formatarMoeda(transferido)} que só mudaram de lugar — não são
-                receita nem despesa.
-              </dd>
-            </div>
-          )}
+          {/*
+            O que foi guardado no cofrinho já tem bloco próprio mais abaixo,
+            com quanto entrou, quanto voltou e quanto rendeu. Repetir o total
+            aqui em cima só somava uma linha para dizer o que a seção diz
+            melhor.
+          */}
         </dl>
       </section>
 
