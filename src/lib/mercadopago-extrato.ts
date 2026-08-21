@@ -68,15 +68,41 @@ async function chamar(caminho: string, token: string, init?: RequestInit) {
 }
 
 /*
- * A data como o Mercado Pago aceita: sem milissegundos.
+ * A janela como o Mercado Pago a entende: dias inteiros no fuso de Brasília.
  *
- * `toISOString()` produz "2026-08-05T03:00:00.000Z", e a API recusa isso
- * respondendo "Must specify begin_date parameter" — uma mensagem que aponta
- * para o campo faltando, não para o formato. Foi por isso que o pedido de
- * extrato falhou em silêncio a cada 15 minutos.
+ * Duas armadilhas moram aqui, e as duas custaram caro.
+ *
+ * A primeira é o formato: `toISOString()` produz milissegundos, e a API recusa
+ * respondendo "Must specify begin_date parameter" — apontando para o campo
+ * faltando em vez do formato.
+ *
+ * A segunda é o arredondamento. Pedindo de 06/08 às 17:45 até 21/08 às 17:45,
+ * o relatório volta cobrindo de 06/08 00:00 a 21/08 23:59, e é essa janela
+ * arredondada que aparece na listagem. Comparar o que pedimos com o que
+ * voltou, instante a instante, nunca casa — e o arquivo pronto fica ali sem
+ * ninguém reconhecer.
+ *
+ * Pedindo já arredondado, o que sai é igual ao que volta.
  */
-function instante(data: Date): string {
-  return data.toISOString().replace(/\.\d{3}Z$/, "Z");
+export function janelaDeDias(
+  inicio: Date,
+  fim: Date,
+): { begin_date: string; end_date: string } {
+  // Meia-noite em Brasília (UTC-3) é 03:00 em UTC.
+  const diaEmBrasilia = (d: Date) =>
+    new Date(d.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const primeiro = diaEmBrasilia(inicio);
+  const seguinteAoUltimo = new Date(
+    new Date(`${diaEmBrasilia(fim)}T12:00:00Z`).getTime() + 86_400_000,
+  )
+    .toISOString()
+    .slice(0, 10);
+
+  return {
+    begin_date: `${primeiro}T03:00:00Z`,
+    end_date: `${seguinteAoUltimo}T02:59:59Z`,
+  };
 }
 
 /** Coloca um período na fila de geração. Devolve o id para buscar depois. */
@@ -85,13 +111,13 @@ export async function pedirRelatorio(
   inicio: Date,
   fim: Date,
 ): Promise<PedidoRelatorio> {
+  const janela = janelaDeDias(inicio, fim);
+
   const resposta = await chamar("", token, {
     method: "POST",
     body: JSON.stringify({
-      begin_date: instante(inicio),
-      end_date: instante(fim),
-      // Sem isto o pedido nasce invisível e nunca sai da fila: fica em
-      // `pending` para sempre, e o arquivo jamais aparece na listagem.
+      ...janela,
+      // Sem isto o pedido nasce invisível e demora muito mais a sair da fila.
       notify: true,
     }),
   });

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   baixarRelatorio,
+  janelaDeDias,
   lerRelatorio,
   pedirRelatorio,
   relatorioPronto,
@@ -127,15 +128,19 @@ export async function pedirProximoRelatorio(
   // Já tem um pedido recente esperando: pedir de novo só engorda a fila.
   if ((count ?? 0) > 0) return false;
 
-  const fim = new Date();
-  const inicio = new Date(fim.getTime() - DIAS_DA_JANELA * 24 * 3600 * 1000);
-  const pedido = await pedirRelatorio(token, inicio, fim);
+  const agora = new Date();
+  const inicio = new Date(agora.getTime() - DIAS_DA_JANELA * 24 * 3600 * 1000);
+  const pedido = await pedirRelatorio(token, inicio, agora);
+
+  // Guarda a janela arredondada, não a que pedimos: é ela que volta na
+  // listagem, e é por ela que o arquivo vai ser reconhecido depois.
+  const janela = janelaDeDias(inicio, agora);
 
   await admin.from("extrato_pedidos").insert({
     id: pedido.id,
     conta_id: conta.id,
-    inicio: inicio.toISOString(),
-    fim: fim.toISOString(),
+    inicio: janela.begin_date,
+    fim: janela.end_date,
     status: "pendente",
   });
 
