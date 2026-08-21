@@ -2,7 +2,7 @@
 
 Painel financeiro da tesouraria: as transações das contas do **Mercado Pago**
 chegam por webhook, são categorizadas e viram gráficos e relatórios para a
-tesouraria e o Conselho Fiscal.
+tesouraria e a Diretoria.
 
 **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · Supabase
 (Postgres + Auth + RLS) · Recharts.
@@ -29,7 +29,7 @@ Para acrescentar outra conta no futuro, insira uma linha em `contas` com slug
 | ------------ | ------------------------------------------------- |
 | `admin`      | tudo, inclusive gerenciar usuários                |
 | `tesoureiro` | lançar, categorizar, criar/excluir categorias     |
-| `conselho`   | apenas visualizar painéis, gráficos e transações  |
+| `conselho`   | Diretoria: apenas visualizar painéis, gráficos e transações |
 
 A restrição é aplicada no banco (RLS), não só na interface.
 

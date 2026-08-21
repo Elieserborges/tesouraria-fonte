@@ -25,7 +25,7 @@ export default async function PaginaLogin(props: PageProps<"/login">) {
           </p>
           <p className="text-white/70">
             Entradas e saídas das contas do Mercado Pago chegam automaticamente,
-            já categorizadas e prontas para o relatório do Conselho Fiscal.
+            já categorizadas e prontas para o relatório da Diretoria.
           </p>
         </div>
         <ul className="relative flex gap-6 text-sm text-white/60">

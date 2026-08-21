@@ -29,7 +29,7 @@ export function OpcoesExportacao({
       titulo: "Relatório completo",
       descricao:
         "Resumo, resultado por categoria, formas de pagamento, eventos, evolução e o anexo com cada lançamento.",
-      detalhe: "PDF · para a reunião do Conselho Fiscal",
+      detalhe: "PDF · para a reunião da Diretoria",
       href: `/exportar/imprimir?${consulta}`,
       externo: true,
       Icone: FileText,

@@ -453,7 +453,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           <span className="font-medium text-texto">{SITE_HOST}</span>.
         </p>
         <div className="mt-10 grid grid-cols-2 gap-12">
-          {["Tesouraria", "Conselho Fiscal"].map((papel) => (
+          {["Tesouraria", "Diretoria"].map((papel) => (
             <div key={papel} className="border-t border-texto pt-1 text-center">
               {papel}
             </div>

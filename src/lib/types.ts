@@ -198,10 +198,17 @@ export function ehTransferencia(t: TransacaoComRelacoes): boolean {
   return t.categoria?.eh_transferencia === true;
 }
 
+/*
+ * O rótulo do papel, que é o que a pessoa lê.
+ *
+ * A chave continua sendo "conselho" porque é o valor gravado no banco, num
+ * tipo enumerado — renomear exigiria migração e não muda nada para quem usa.
+ * Aqui só se decide o nome que aparece na tela.
+ */
 export const PAPEL_LABEL: Record<PapelUsuario, string> = {
   admin: "Administrador",
   tesoureiro: "Tesoureiro",
-  conselho: "Conselho Fiscal",
+  conselho: "Diretoria",
 };
 
 export function podeEditar(papel: PapelUsuario | undefined | null): boolean {
