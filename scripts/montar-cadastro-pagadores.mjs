@@ -69,7 +69,6 @@ for (let de = 0; ; de += 500) {
     if (nome.length < 4 || !nome.includes(" ")) continue;
 
     const chave = String(id);
-    // Mais de um nome para o mesmo id: fica o mais frequente.
     const votos = contagem.get(chave) ?? new Map();
     votos.set(nome, (votos.get(nome) ?? 0) + 1);
     contagem.set(chave, votos);
@@ -78,14 +77,30 @@ for (let de = 0; ; de += 500) {
   if (data.length < 500) break;
 }
 
+/*
+ * Identificador com mais de um nome não é de uma pessoa.
+ *
+ * Pix vindo de outro banco e venda no QR Code presencial chegam todos sob um
+ * mesmo identificador genérico — um deles cobre 273 pessoas. Ficar
+ * com o nome mais votado carimbava esse nome em mais de mil transações: a
+ * doação de uma pessoa aparecia como se fosse de outra.
+ *
+ * O nome mais frequente só vale quando é o único.
+ */
+let genericos = 0;
 for (const [id, votos] of contagem) {
-  const [melhor] = [...votos.entries()].sort((a, b) => b[1] - a[1]);
+  if (votos.size > 1) {
+    genericos += 1;
+    continue;
+  }
+  const [melhor] = [...votos.entries()];
   nomePorId.set(id, melhor[0]);
 }
 
 console.log(`transações analisadas:     ${total}`);
 console.log(`com payer.id:              ${comPayerId}`);
 console.log(`pessoas identificadas:     ${nomePorId.size}`);
+console.log(`identificadores genéricos:  ${genericos} (descartados)`);
 
 console.log("\namostra:");
 for (const [id, nome] of [...nomePorId.entries()].slice(0, 10)) {

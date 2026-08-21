@@ -14,7 +14,8 @@
     "enriquecer": "node --env-file=.env.local scripts/enriquecer-nomes.mjs",
     "pagadores": "node --env-file=.env.local scripts/montar-cadastro-pagadores.mjs",
     "conciliar": "node --env-file=.env.local scripts/conciliar-extrato.mjs",
-    "sincronizar-extrato": "node --env-file=.env.local scripts/sincronizar-extrato.mjs"
+    "sincronizar-extrato": "node --env-file=.env.local scripts/sincronizar-extrato.mjs",
+    "corrigir-pagadores": "node --env-file=.env.local scripts/corrigir-pagadores.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
