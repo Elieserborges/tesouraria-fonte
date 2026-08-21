@@ -231,9 +231,9 @@ export function TabelaTransacoes({
                     {aguardandoCaptura(t.status) && (
                       <span
                         className="ml-1.5 align-middle text-[0.65rem] font-medium uppercase tracking-wide text-texto-suave"
-                        title="Compra no cartão já bloqueada, aguardando o lojista capturar."
+                        title="O valor já saiu do saldo disponível, mas a loja ainda não fechou a cobrança. Some do extrato até lá, e volta se a autorização expirar."
                       >
-                        bloqueado
+                        aguardando
                       </span>
                     )}
                   </td>
