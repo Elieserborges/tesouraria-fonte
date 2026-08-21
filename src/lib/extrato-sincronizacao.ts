@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  agruparMovimentos,
   baixarRelatorio,
   janelaDeDias,
   lerRelatorio,
@@ -77,7 +78,9 @@ export async function importarRelatoriosProntos(
 
     try {
       const csv = await baixarRelatorio(token, arquivo.file_name);
-      const { movimentos } = lerRelatorio(csv);
+      // Uma operação pode ocupar várias linhas do relatório; aqui elas viram
+      // um movimento só, com o efeito somado.
+      const movimentos = agruparMovimentos(lerRelatorio(csv).movimentos);
       const efeito = await aplicarMovimentos(admin, conta, movimentos);
 
       criados += efeito.criados;
@@ -217,6 +220,10 @@ export async function aplicarMovimentos(
       .update({ valor, valor_bruto: bruto, tarifa: Number(m.tarifa.toFixed(2)), tipo })
       .eq("id", jaTem.id);
 
+    // O mapa precisa acompanhar o que já foi gravado: comparar contra o
+    // valor original faria a linha seguinte parecer inalterada.
+    jaTem.valor = valor;
+    jaTem.tipo = tipo;
     corrigidos += 1;
   }
 

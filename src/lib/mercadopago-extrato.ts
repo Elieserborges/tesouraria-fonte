@@ -233,6 +233,67 @@ export function lerRelatorio(csv: string): {
 }
 
 /**
+ * Junta as linhas que descrevem a mesma operação.
+ *
+ * Um identificador não corresponde a uma linha. Uma transferência enviada
+ * aparece em três:
+ *
+ *   173883748254  reserve_for_payout  débito  1388   reserva o valor
+ *   173883748254  reserve_for_payout  crédito 1388   devolve a reserva
+ *   173883748254  payout              débito  1388   paga de fato
+ *
+ * O efeito real é um débito de 1388, mas quem lê linha a linha vê um débito,
+ * um crédito e outro débito da mesma transação. Foi assim que um Pix enviado
+ * de R$ 5.260 virou receita: a linha do meio inverteu o sinal, e a última foi
+ * descartada por "não ter mudado nada".
+ *
+ * Somar por identificador devolve a operação como ela é.
+ */
+export function agruparMovimentos(
+  movimentos: MovimentoExtrato[],
+): MovimentoExtrato[] {
+  const porId = new Map<string, MovimentoExtrato[]>();
+  for (const m of movimentos) {
+    const linhas = porId.get(m.id) ?? [];
+    linhas.push(m);
+    porId.set(m.id, linhas);
+  }
+
+  const juntos: MovimentoExtrato[] = [];
+
+  for (const [id, linhas] of porId) {
+    if (linhas.length === 1) {
+      juntos.push(linhas[0]);
+      continue;
+    }
+
+    const liquido = Number(linhas.reduce((s, l) => s + l.liquido, 0).toFixed(2));
+    const tarifa = Number(linhas.reduce((s, l) => s + l.tarifa, 0).toFixed(2));
+
+    // Reservas se anulam; o que dá nome à operação é a linha que sobra.
+    const principal =
+      linhas.find((l) => !l.descricao.startsWith("reserve_")) ??
+      linhas[linhas.length - 1];
+
+    // Reserva criada e devolvida sem pagamento nenhum não movimentou dinheiro.
+    if (liquido === 0 && tarifa === 0) continue;
+
+    juntos.push({
+      ...principal,
+      id,
+      liquido,
+      tarifa,
+      // O bruto reconstruído: o que saiu da conta mais o que ficou retido.
+      bruto: Number((Math.abs(liquido) + tarifa).toFixed(2)),
+      // O saldo que vale é o da última linha, depois de tudo aplicado.
+      saldo: linhas[linhas.length - 1].saldo,
+    });
+  }
+
+  return juntos;
+}
+
+/**
  * Descrições do relatório vêm em código ("reserve_for_payment"). A tesouraria
  * lê o extrato, então cada uma ganha um rótulo em português. O que não estiver
  * no mapa passa direto — é melhor mostrar o código do que engolir a linha.
