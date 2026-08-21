@@ -93,7 +93,7 @@ Abra <http://localhost:3000>.
 Cada conta tem sua própria URL, formada pelo `slug`:
 
 ```
-https://SEU-DOMINIO/api/webhooks/mercadopago/conta-1
+https://www.fluxxfinance.com.br/api/webhooks/mercadopago/conta-1
 ```
 
 No painel do Mercado Pago: **Suas integrações → sua aplicação → Webhooks**,

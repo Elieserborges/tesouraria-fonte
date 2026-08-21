@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { listarTransacoes } from "@/lib/dados";
 import { janelaDaUrl } from "@/lib/periodo";
+import { SITE_HOST } from "@/lib/site";
 import { obterSessao } from "@/lib/supabase/server";
 import { FORMA_LABEL, type FormaPagamento } from "@/lib/types";
 
@@ -54,8 +55,24 @@ export async function GET(request: NextRequest) {
     ].map(campo).join(";");
   });
 
+  /*
+   * Duas linhas de procedência antes da tabela.
+   *
+   * Uma planilha exportada circula por e-mail e some do contexto: seis meses
+   * depois ninguém lembra de onde veio nem que período cobre. O Excel abre
+   * normalmente com elas no topo, e quem for conferir sabe onde procurar a
+   * origem.
+   */
+  const periodo = tudo ? "todo o período" : `de ${de} a ${ate}`;
+  const procedencia = [
+    campo(`Fluxx Finance — ${SITE_HOST}`),
+    campo(`Transações ${periodo}, exportadas em ${new Date().toLocaleString("pt-BR")}`),
+    "",
+  ];
+
   // BOM para o Excel reconhecer os acentos; ponto e vírgula como separador.
-  const csv = "﻿" + [cabecalho.map(campo).join(";"), ...linhas].join("\r\n");
+  const csv =
+    "﻿" + [...procedencia, cabecalho.map(campo).join(";"), ...linhas].join("\r\n");
   const nome = tudo ? "todo-o-periodo" : `${de}_a_${ate}`;
 
   return new NextResponse(csv, {

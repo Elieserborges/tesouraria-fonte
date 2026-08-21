@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SITE_URL } from "@/lib/site";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  // Sem isto o Next monta as URLs dos metadados relativas ao endereço do
+  // deploy da vez, e um link compartilhado apontaria para a pré-visualização
+  // em vez do endereço da igreja.
+  metadataBase: new URL(SITE_URL),
   title: "Fluxx Finance",
   description: "Controle financeiro — entradas, saídas, categorias e relatórios.",
 };

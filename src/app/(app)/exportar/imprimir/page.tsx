@@ -13,6 +13,7 @@ import {
 } from "@/lib/dados";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import { janelaDaUrl } from "@/lib/periodo";
+import { SITE_HOST } from "@/lib/site";
 import { obterSessao } from "@/lib/supabase/server";
 import { contaNoSaldo, ehTransferencia, FORMA_LABEL, type FormaPagamento } from "@/lib/types";
 
@@ -98,6 +99,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
       <header className="flex items-start justify-between gap-6 border-b-2 border-texto pb-4">
         <div>
           <Logo className="text-texto" />
+          <p className="text-[10px] text-texto-suave">{SITE_HOST}</p>
           <p className="mt-3 text-lg font-semibold">Relatório financeiro</p>
           <p className="text-sm capitalize text-texto-suave">{rotulo}</p>
         </div>
@@ -443,6 +445,18 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           Documento gerado pelo Fluxx Finance a partir das movimentações
           registradas. Valores em reais. Apenas lançamentos aprovados entram nos
           totais; pendentes e estornados ficam de fora.
+        </p>
+        {/*
+          O endereço no papel.
+
+          Quem recebe este PDF numa reunião não tem como conferir nada além do
+          que está impresso. Com o endereço, quem tem acesso confere os mesmos
+          números na origem — e é essa possibilidade que sustenta a
+          transparência, não o documento em si.
+        */}
+        <p className="mt-1">
+          Consulte os lançamentos que compõem estes números em{" "}
+          <span className="font-medium text-texto">{SITE_HOST}</span>.
         </p>
         <div className="mt-10 grid grid-cols-2 gap-12">
           {["Tesouraria", "Conselho Fiscal"].map((papel) => (
