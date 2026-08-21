@@ -80,6 +80,71 @@ export function TabelaTransacoes({
     );
   }
 
+  /** O seletor de categoria, ou a etiqueta, conforme quem está olhando. */
+  const categoriaDe = (t: TransacaoComRelacoes) =>
+    editavel ? (
+      <select
+        value={t.categoria_id ?? ""}
+        onChange={(e) => mudarCategoria(t.id, e.target.value)}
+        aria-label={`Categoria de ${t.descricao ?? "transação"}`}
+        className={`w-full max-w-52 rounded-lg border px-2.5 py-1.5 text-sm outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/25 ${
+          t.categoria_id
+            ? "border-borda bg-superficie text-texto"
+            : "border-atencao/50 bg-atencao/10 text-atencao"
+        }`}
+      >
+        <option value="">Sem categoria</option>
+        {categorias
+          .filter((c) => c.tipo === t.tipo)
+          .map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
+          ))}
+      </select>
+    ) : t.categoria ? (
+      <span
+        className="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium"
+        style={{ backgroundColor: `${t.categoria.cor}1f`, color: t.categoria.cor }}
+      >
+        {t.categoria.nome}
+      </span>
+    ) : (
+      <span className="text-xs text-texto-suave">Sem categoria</span>
+    );
+
+  const valorDe = (t: TransacaoComRelacoes) => (
+    <>
+      {t.tipo === "entrada" ? "+" : "−"} {formatarMoeda(t.valor)}
+      {/*
+        Compra bloqueada no cartão: o valor já saiu do disponível, mas o
+        lojista ainda não capturou. Some do extrato até lá, e pode voltar se
+        a autorização expirar.
+      */}
+      {aguardandoCaptura(t.status) && (
+        <span
+          className="ml-1.5 align-middle text-[0.65rem] font-medium uppercase tracking-wide text-texto-suave"
+          title="O valor já saiu do saldo disponível, mas a loja ainda não fechou a cobrança. Some do extrato até lá, e volta se a autorização expirar."
+        >
+          aguardando
+        </span>
+      )}
+    </>
+  );
+
+  const seta = (t: TransacaoComRelacoes) => (
+    <span
+      aria-hidden
+      className={`grid size-7 shrink-0 place-items-center rounded-full ${
+        t.tipo === "entrada"
+          ? "bg-verde-400/15 text-entrada"
+          : "bg-alerta/12 text-saida"
+      }`}
+    >
+      {t.tipo === "entrada" ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}
+    </span>
+  );
+
   return (
     <div className={pendente ? "opacity-60 transition-opacity" : "transition-opacity"}>
       {erro && (
@@ -100,7 +165,59 @@ export function TabelaTransacoes({
         </p>
       )}
 
-      <div className="overflow-x-auto">
+      {/*
+        No celular, cartões — não uma tabela encolhida.
+
+        Cinco colunas em 375px não cabem: a descrição, que é a única coisa que
+        identifica o lançamento, ficava reduzida a uma letra enquanto o resto
+        escapava para fora da tela. Empilhar resolve de vez, e ainda deixa o
+        valor legível sem rolar para o lado.
+      */}
+      <ul className="divide-y divide-borda/60 md:hidden">
+        {transacoes.map((t) => (
+          <li key={t.id} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              {seta(t)}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-texto">
+                  {t.descricao || (t.tipo === "entrada" ? "Entrada" : "Saída")}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-texto-suave">
+                  {formatarDataHora(t.ocorrido_em)}
+                  {t.forma ? ` · ${FORMA_LABEL[t.forma] ?? t.forma}` : ""}
+                  {nomeUtil(t.contraparte) ? ` · ${t.contraparte}` : ""}
+                </p>
+              </div>
+              <span
+                className={`valor-sensivel shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums ${
+                  t.tipo === "entrada" ? "text-entrada" : "text-saida"
+                }`}
+              >
+                {valorDe(t)}
+              </span>
+            </div>
+
+            {!compacta && (
+              <div className="mt-2 flex items-center gap-2 pl-10">
+                <div className="min-w-0 flex-1">{categoriaDe(t)}</div>
+                {editavel && t.origem === "manual" && (
+                  <button
+                    type="button"
+                    onClick={() => remover(t.id)}
+                    aria-label="Excluir lançamento"
+                    className="shrink-0 rounded-lg p-1.5 text-texto-suave transition hover:bg-alerta/10 hover:text-alerta"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {/* A partir do tablet há largura para a tabela, que compara melhor. */}
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[46rem] text-sm">
           <thead>
             <tr className="border-b border-borda text-left text-xs uppercase tracking-wider text-texto-suave">
@@ -132,14 +249,7 @@ export function TabelaTransacoes({
                   */}
                   <td className="w-full max-w-0 px-5 py-3">
                     <div className="flex items-center gap-2.5">
-                      <span
-                        aria-hidden
-                        className={`grid size-7 shrink-0 place-items-center rounded-full ${
-                          entrada ? "bg-verde-400/15 text-entrada" : "bg-alerta/12 text-saida"
-                        }`}
-                      >
-                        {entrada ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}
-                      </span>
+                      {seta(t)}
                       <span className="min-w-0 flex-1">
                         <span
                           className="block truncate font-medium text-texto"
@@ -154,10 +264,10 @@ export function TabelaTransacoes({
                             </span>
                           )}
                           {/*
-                            O nome mascarado não vira texto na tela.
-                            A API devolve "XXXXXXXXXXX" quando não pode
-                            revelar quem pagou; mostrar isso ocupa espaço
-                            para dizer menos que o vazio.
+                            O nome mascarado não vira texto na tela. A API
+                            devolve "XXXXXXXXXXX" quando não pode revelar quem
+                            pagou; mostrar isso ocupa espaço para dizer menos
+                            que o vazio.
                           */}
                           {nomeUtil(t.contraparte) && (
                             <span className="truncate">{t.contraparte}</span>
@@ -186,63 +296,14 @@ export function TabelaTransacoes({
                     </span>
                   </td>
 
-                  {!compacta && (
-                    <td className="px-5 py-3">
-                      {editavel ? (
-                        <select
-                          value={t.categoria_id ?? ""}
-                          onChange={(e) => mudarCategoria(t.id, e.target.value)}
-                          aria-label={`Categoria de ${t.descricao ?? "transação"}`}
-                          className={`w-full max-w-52 rounded-lg border px-2.5 py-1.5 text-sm outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/25 ${
-                            t.categoria_id
-                              ? "border-borda bg-superficie text-texto"
-                              : "border-atencao/50 bg-atencao/10 text-atencao"
-                          }`}
-                        >
-                          <option value="">Sem categoria</option>
-                          {categorias
-                            .filter((c) => c.tipo === t.tipo)
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.nome}
-                              </option>
-                            ))}
-                        </select>
-                      ) : t.categoria ? (
-                        <span
-                          className="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium"
-                          style={{
-                            backgroundColor: `${t.categoria.cor}1f`,
-                            color: t.categoria.cor,
-                          }}
-                        >
-                          {t.categoria.nome}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-texto-suave">Sem categoria</span>
-                      )}
-                    </td>
-                  )}
+                  {!compacta && <td className="px-5 py-3">{categoriaDe(t)}</td>}
 
                   <td
                     className={`valor-sensivel whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums ${
                       entrada ? "text-entrada" : "text-saida"
                     }`}
                   >
-                    {entrada ? "+" : "−"} {formatarMoeda(t.valor)}
-                    {/*
-                      Compra bloqueada no cartão: o valor já saiu do disponível,
-                      mas o lojista ainda não capturou. Some do extrato até lá,
-                      e pode voltar se a autorização expirar.
-                    */}
-                    {aguardandoCaptura(t.status) && (
-                      <span
-                        className="ml-1.5 align-middle text-[0.65rem] font-medium uppercase tracking-wide text-texto-suave"
-                        title="O valor já saiu do saldo disponível, mas a loja ainda não fechou a cobrança. Some do extrato até lá, e volta se a autorização expirar."
-                      >
-                        aguardando
-                      </span>
-                    )}
+                    {valorDe(t)}
                   </td>
 
                   {!compacta && editavel && (
