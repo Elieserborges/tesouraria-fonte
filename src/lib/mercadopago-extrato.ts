@@ -67,6 +67,18 @@ async function chamar(caminho: string, token: string, init?: RequestInit) {
   return resposta;
 }
 
+/*
+ * A data como o Mercado Pago aceita: sem milissegundos.
+ *
+ * `toISOString()` produz "2026-08-05T03:00:00.000Z", e a API recusa isso
+ * respondendo "Must specify begin_date parameter" — uma mensagem que aponta
+ * para o campo faltando, não para o formato. Foi por isso que o pedido de
+ * extrato falhou em silêncio a cada 15 minutos.
+ */
+function instante(data: Date): string {
+  return data.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
 /** Coloca um período na fila de geração. Devolve o id para buscar depois. */
 export async function pedirRelatorio(
   token: string,
@@ -76,8 +88,11 @@ export async function pedirRelatorio(
   const resposta = await chamar("", token, {
     method: "POST",
     body: JSON.stringify({
-      begin_date: inicio.toISOString(),
-      end_date: fim.toISOString(),
+      begin_date: instante(inicio),
+      end_date: instante(fim),
+      // Sem isto o pedido nasce invisível e nunca sai da fila: fica em
+      // `pending` para sempre, e o arquivo jamais aparece na listagem.
+      notify: true,
     }),
   });
 
