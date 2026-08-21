@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OpcoesExportacao } from "@/components/exportar/opcoes-exportacao";
 import { listarTransacoes, somar } from "@/lib/dados";
+import { SubirExtrato } from "@/components/exportar/subir-extrato";
 import { formatarMoeda } from "@/lib/format";
 import { contaNoSaldo } from "@/lib/types";
 import { janelaDaUrl } from "@/lib/periodo";
@@ -47,6 +48,13 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
       </section>
 
       <OpcoesExportacao consulta={consulta} lancamentos={aprovadas.length} />
+
+      {/*
+        Importar fica junto de exportar porque é o mesmo assunto: a troca de
+        arquivos entre o sistema e o banco. Uma aba só para isso seria um item
+        de menu para uma tarefa mensal.
+      */}
+      <SubirExtrato />
     </div>
   );
 }

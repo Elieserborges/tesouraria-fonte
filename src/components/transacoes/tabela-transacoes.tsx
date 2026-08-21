@@ -6,6 +6,7 @@ import { formatarDataHora, formatarMoeda } from "@/lib/format";
 import {
   aguardandoCaptura,
   FORMA_LABEL,
+  nomeUtil,
   type Categoria,
   type TransacaoComRelacoes,
 } from "@/lib/types";
@@ -152,7 +153,13 @@ export function TabelaTransacoes({
                               {FORMA_LABEL[t.forma] ?? t.forma}
                             </span>
                           )}
-                          {t.contraparte && (
+                          {/*
+                            O nome mascarado não vira texto na tela.
+                            A API devolve "XXXXXXXXXXX" quando não pode
+                            revelar quem pagou; mostrar isso ocupa espaço
+                            para dizer menos que o vazio.
+                          */}
+                          {nomeUtil(t.contraparte) && (
                             <span className="truncate">{t.contraparte}</span>
                           )}
                         </span>
