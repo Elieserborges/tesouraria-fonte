@@ -68,12 +68,14 @@ export const config = {
      * - arquivos estáticos do Next
      * - imagens e ícones
      * - /api/webhooks (chamado pelo Mercado Pago, sem sessão)
+     * - /w (o mesmo webhook num endereço curto, que cabe no campo do painel)
      * - /api/cron (chamado pelo Vercel Cron, autentica pelo CRON_SECRET)
      *
      * Sem essas exceções o proxy redireciona para /login, e quem chama de
      * fora recebe um 307 em vez da resposta — foi exatamente o que fez o
-     * webhook falhar em silêncio.
+     * webhook falhar em silêncio. Toda rota nova chamada de fora precisa
+     * entrar nesta lista, ou repete a mesma falha.
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|w/|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
