@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { ArrowDownToLine, ArrowUpFromLine, PiggyBank, Sprout } from "lucide-react";
 import { AlternarValores } from "@/components/shell/alternar-valores";
 import { CartaoMetrica } from "@/components/dashboard/cartao-metrica";
+import { AcertarRendimento } from "@/components/cofrinho/acertar-rendimento";
 import { TabelaTransacoes } from "@/components/transacoes/tabela-transacoes";
 import { listarCategorias, listarSaldosPorConta, listarTransacoes, idsDasContasDeReserva } from "@/lib/dados";
 import { formatarMoeda } from "@/lib/format";
-import { contaNoSaldo, ehTransferencia } from "@/lib/types";
+import { obterSessao } from "@/lib/supabase/server";
+import { contaNoSaldo, ehTransferencia, podeEditar } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Cofrinho · Fluxx Finance" };
 
@@ -21,6 +23,9 @@ export const metadata: Metadata = { title: "Cofrinho · Fluxx Finance" };
  * responde é "quanto está guardado", que não depende de janela de tempo.
  */
 export default async function PaginaCofrinho() {
+  const sessao = await obterSessao();
+  const editavel = podeEditar(sessao?.perfil?.papel);
+
   const [saldos, idsDeReserva, categorias, movimentos] = await Promise.all([
     listarSaldosPorConta(),
     idsDasContasDeReserva(),
@@ -101,6 +106,8 @@ export default async function PaginaCofrinho() {
           }
         />
       </section>
+
+      {editavel && <AcertarRendimento saldoAtual={total} />}
 
       <section className="cartao overflow-hidden">
         <header className="flex items-center gap-2 px-5 py-4">

@@ -147,6 +147,7 @@ export async function importarExtrato(
   revalidatePath("/transacoes");
   revalidatePath("/dashboard");
   revalidatePath("/relatorios");
+  revalidatePath("/cofrinho");
   revalidatePath("/exportar");
 
   return {
