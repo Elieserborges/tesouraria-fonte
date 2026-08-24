@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OpcoesExportacao } from "@/components/exportar/opcoes-exportacao";
-import { listarTransacoes, somar } from "@/lib/dados";
+import { listarCategorias, listarTransacoes, somar } from "@/lib/dados";
+import { ExportacaoPersonalizada } from "@/components/exportar/exportacao-personalizada";
 import { SubirExtrato } from "@/components/exportar/subir-extrato";
 import { formatarMoeda } from "@/lib/format";
 import { contaNoSaldo } from "@/lib/types";
@@ -13,10 +14,19 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
   const sp = await props.searchParams;
   const { tudo, de, ate, inicio, fim, rotulo } = janelaDaUrl(sp);
 
-  const transacoes = await listarTransacoes({ inicio, fim, limite: 50000 });
+  const [transacoes, categorias] = await Promise.all([
+    listarTransacoes({ inicio, fim, limite: 50000 }),
+    listarCategorias(),
+  ]);
   const aprovadas = transacoes.filter((t) => contaNoSaldo(t.status));
 
   const consulta = tudo ? "periodo=tudo" : `de=${de}&ate=${ate}`;
+
+  // Entrada e saída de um mesmo assunto são duas categorias com o mesmo nome;
+  // o recorte fala das duas, então a lista não repete por tipo.
+  const nomes = [...new Set(categorias.map((c) => c.nome))].sort((a, b) =>
+    a.localeCompare(b, "pt-BR"),
+  );
 
   return (
     <div className="space-y-6">
@@ -48,6 +58,8 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
       </section>
 
       <OpcoesExportacao consulta={consulta} lancamentos={aprovadas.length} />
+
+      <ExportacaoPersonalizada categorias={nomes} consulta={consulta} />
 
       {/*
         Importar fica junto de exportar porque é o mesmo assunto: a troca de

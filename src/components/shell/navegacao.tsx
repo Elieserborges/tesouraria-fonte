@@ -10,6 +10,7 @@ import {
   Calculator,
   Download,
   PiggyBank,
+  Target,
   Tags,
   Users,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const ITENS = [
   { href: "/relatorios", rotulo: "Relatórios", Icone: ChartColumn, soAdmin: false },
   { href: "/eventos", rotulo: "Eventos", Icone: CalendarRange, soAdmin: false },
   { href: "/cofrinho", rotulo: "Cofrinho", Icone: PiggyBank, soAdmin: false },
+  { href: "/metas", rotulo: "Metas", Icone: Target, soAdmin: false },
   { href: "/categorias", rotulo: "Categorias", Icone: Tags, soAdmin: false },
   { href: "/exportar", rotulo: "Exportar", Icone: Download, soAdmin: false },
   { href: "/calculadora", rotulo: "Calculadora", Icone: Calculator, soAdmin: false },

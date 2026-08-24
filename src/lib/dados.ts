@@ -4,6 +4,7 @@ import type {
   Categoria,
   Conta,
   EventoComResultado,
+  MetaComResultado,
   RegraComUso,
   TipoTransacao,
   TransacaoComRelacoes,
@@ -271,6 +272,22 @@ export async function listarRegras(): Promise<RegraComUso[]> {
       return { ...r, atingidas: count ?? 0 };
     }),
   );
+}
+
+/** Metas cadastradas, com o quanto já foi realizado em cada uma. */
+export async function listarMetas(): Promise<MetaComResultado[]> {
+  const supabase = await criarClienteServidor();
+  const { data } = await supabase
+    .from("resultado_por_meta")
+    .select("meta_id, categoria_nome, tipo, inicio, fim, previsto, realizado, lancamentos, observacao")
+    .order("inicio", { ascending: false });
+
+  return ((data ?? []) as MetaComResultado[]).map((m) => ({
+    ...m,
+    previsto: Number(m.previsto),
+    realizado: Number(m.realizado),
+    lancamentos: Number(m.lancamentos),
+  }));
 }
 
 /** Edições cadastradas, com arrecadação e despesa de cada uma. */

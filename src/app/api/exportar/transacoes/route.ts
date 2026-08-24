@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { listarTransacoes } from "@/lib/dados";
 import { janelaDaUrl } from "@/lib/periodo";
+import { recorteDaUrl, rotuloDoRecorte } from "@/lib/exportacao";
 import { SITE_HOST } from "@/lib/site";
 import { obterSessao } from "@/lib/supabase/server";
 import { FORMA_LABEL, type FormaPagamento } from "@/lib/types";
@@ -23,14 +24,23 @@ export async function GET(request: NextRequest) {
   const sp = Object.fromEntries(request.nextUrl.searchParams);
   const { inicio, fim, de, ate, tudo } = janelaDaUrl(sp);
 
-  // A exportação leva tudo, cofrinho incluído: a coluna Conta separa o que é
-  // caixa do que é reserva, e quem confere prefere o arquivo completo.
-  const transacoes = await listarTransacoes({
+  const recorte = recorteDaUrl(sp);
+
+  // Leva tudo, cofrinho incluído: a coluna Conta separa o que é caixa do que
+  // é reserva, e quem confere prefere o arquivo completo.
+  const todas = await listarTransacoes({
     inicio,
     fim,
     limite: 50000,
     reservas: "todas",
   });
+
+  // Mesmo recorte do relatório impresso: quem exporta as contas de um evento
+  // quer a planilha do evento, não a da igreja com uma coluna a mais.
+  const transacoes =
+    recorte.categorias.length > 0
+      ? todas.filter((t) => t.categoria && recorte.categorias.includes(t.categoria.nome))
+      : todas;
 
   const cabecalho = [
     "Data", "Hora", "Tipo", "Valor", "Status", "Conta", "Categoria",
@@ -66,7 +76,10 @@ export async function GET(request: NextRequest) {
   const periodo = tudo ? "todo o período" : `de ${de} a ${ate}`;
   const procedencia = [
     campo(`Fluxx Finance — ${SITE_HOST}`),
-    campo(`Transações ${periodo}, exportadas em ${new Date().toLocaleString("pt-BR")}`),
+    campo(
+      (rotuloDoRecorte(recorte.categorias) ?? "Todas as categorias") +
+        ` — ${periodo}, exportadas em ${new Date().toLocaleString("pt-BR")}`,
+    ),
     "",
   ];
 

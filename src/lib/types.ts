@@ -254,3 +254,22 @@ export type UsuarioGerenciado = {
   ultimo_acesso: string | null;
   confirmado: boolean;
 };
+
+/** Quanto se espera arrecadar ou gastar numa categoria, num período. */
+export type Meta = {
+  id: string;
+  categoria_nome: string;
+  tipo: TipoTransacao;
+  inicio: string;
+  fim: string;
+  valor: number;
+  observacao: string | null;
+};
+
+/** A meta com o que já foi realizado dentro da janela. */
+export type MetaComResultado = Omit<Meta, "id" | "valor"> & {
+  meta_id: string;
+  previsto: number;
+  realizado: number;
+  lancamentos: number;
+};

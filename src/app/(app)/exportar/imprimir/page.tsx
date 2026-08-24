@@ -12,6 +12,7 @@ import {
 } from "@/lib/dados";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import { janelaDaUrl } from "@/lib/periodo";
+import { recorteDaUrl, rotuloDoRecorte } from "@/lib/exportacao";
 import { SITE_HOST } from "@/lib/site";
 import { obterSessao } from "@/lib/supabase/server";
 import { contaNoSaldo, ehTransferencia, FORMA_LABEL, type FormaPagamento } from "@/lib/types";
@@ -25,16 +26,30 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
   const sp = await props.searchParams;
   const { inicio, fim, de, ate, tudo, rotulo } = janelaDaUrl(sp);
   const detalhado = sp.modelo !== "resumo";
+  const recorte = recorteDaUrl(sp);
+  const filtrado = recorte.categorias.length > 0;
+  const mostra = (secao: string) => recorte.secoes.includes(secao as never);
 
   const sessao = await obterSessao();
 
-  const [transacoes, reserva, saldos, idsDeReserva, eventos] = await Promise.all([
+  const [todas, reserva, saldos, idsDeReserva, eventos] = await Promise.all([
     listarTransacoes({ inicio, fim, limite: 50000 }),
     listarTransacoes({ inicio, fim, limite: 5000, reservas: "somente" }),
     listarSaldosPorConta(),
     idsDasContasDeReserva(),
     listarEventos(),
   ]);
+
+  /*
+   * O recorte por categoria vale para tudo que vem depois.
+   *
+   * Filtrar só a tabela de categorias deixaria os totais do resumo falando de
+   * outro conjunto — quem recebe leria o resultado da igreja achando que é o
+   * do evento dele.
+   */
+  const transacoes = filtrado
+    ? todas.filter((t) => t.categoria && recorte.categorias.includes(t.categoria.nome))
+    : todas;
 
   const entradas = somar(transacoes, "entrada");
   const saidas = somar(transacoes, "saida");
@@ -97,8 +112,21 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
         <div>
           <Logo className="text-texto" />
           <p className="text-[10px] text-texto-suave">{SITE_HOST}</p>
-          <p className="mt-3 text-lg font-semibold">Relatório financeiro</p>
+          <p className="mt-3 text-lg font-semibold">
+            {filtrado ? rotuloDoRecorte(recorte.categorias) : "Relatório financeiro"}
+          </p>
           <p className="text-sm capitalize text-texto-suave">{rotulo}</p>
+          {/*
+            Um recorte precisa se anunciar. Sem esta linha, quem recebe lê os
+            totais como se fossem os da igreja inteira — e a intenção era
+            justamente entregar só a parte que interessa a essa pessoa.
+          */}
+          {filtrado && (
+            <p className="mt-1 text-xs text-texto-suave">
+              Somente as categorias acima. Não é a movimentação completa da
+              igreja.
+            </p>
+          )}
         </div>
         <div className="text-right text-xs text-texto-suave">
           <p className="font-medium text-texto">Comunidade Cristã Fonte da Vida</p>
@@ -109,6 +137,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
       </header>
 
       {/* Resumo */}
+      {mostra("resumo") && (
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">Resumo</h2>
         <div className="grid grid-cols-4 gap-3">
@@ -116,12 +145,19 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
             { r: "Entradas", v: entradas, c: "text-entrada" },
             { r: "Saídas", v: saidas, c: "text-saida" },
             { r: "Resultado", v: resultado, c: resultado >= 0 ? "text-entrada" : "text-saida" },
-            { r: "Saldo atual", v: saldoTotal, c: "text-texto" },
+            /*
+             * Num recorte, o saldo da conta não diz respeito ao que está sendo
+             * mostrado: seria o dinheiro da igreja inteira ao lado dos números
+             * de um evento. No lugar dele vai o que o recorte tem de concreto.
+             */
+            filtrado
+              ? { r: "Lançamentos", v: aprovadas.length, c: "text-texto", contagem: true }
+              : { r: "Saldo atual", v: saldoTotal, c: "text-texto", contagem: false },
           ].map((x) => (
             <div key={x.r} className="cartao px-3 py-2">
               <p className="text-[11px] text-texto-suave">{x.r}</p>
               <p className={`text-base font-semibold tabular-nums ${x.c}`}>
-                {formatarMoeda(x.v)}
+                {"contagem" in x && x.contagem ? x.v : formatarMoeda(x.v)}
               </p>
             </div>
           ))}
@@ -139,10 +175,12 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
             <dt className="font-semibold text-texto">Resultado:</dt>
             <dd>entradas menos saídas do período.</dd>
           </div>
-          <div className="flex gap-1.5">
-            <dt className="font-semibold text-texto">Saldo atual:</dt>
-            <dd>o que há na conta hoje, somando todo o histórico.</dd>
-          </div>
+          {!filtrado && (
+            <div className="flex gap-1.5">
+              <dt className="font-semibold text-texto">Saldo atual:</dt>
+              <dd>o que há na conta hoje, somando todo o histórico.</dd>
+            </div>
+          )}
           {/*
             O que foi guardado no cofrinho já tem bloco próprio mais abaixo,
             com quanto entrou, quanto voltou e quanto rendeu. Repetir o total
@@ -151,8 +189,10 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           */}
         </dl>
       </section>
+      )}
 
       {/* Por categoria */}
+      {mostra("categorias") && (
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">
           Resultado por categoria
@@ -203,8 +243,10 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           </tfoot>
         </table>
       </section>
+      )}
 
       {/* Como entrou e saiu */}
+      {mostra("formas") && (
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">
           Por forma de pagamento
@@ -238,6 +280,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
           </tbody>
         </table>
       </section>
+      )}
 
       {/*
         Cofrinho.
@@ -246,7 +289,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
         é da igreja e precisa constar na prestação de contas, mas somá-lo ao
         saldo faria o relatório prometer um disponível que não existe.
       */}
-      {(totalReservado > 0 || aprovadasReserva.length > 0) && (
+      {mostra("cofrinho") && !filtrado && (totalReservado > 0 || aprovadasReserva.length > 0) && (
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">Cofrinho</h2>
           <p className="mb-2 text-[11px] text-texto-suave">
@@ -295,7 +338,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
       )}
 
       {/* Eventos */}
-      {eventosDoPeriodo.length > 0 && (
+      {mostra("eventos") && eventosDoPeriodo.length > 0 && (
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">Eventos</h2>
           <table className="w-full border-collapse text-xs">
@@ -342,7 +385,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
       )}
 
       {/* Evolução */}
-      {fluxo.length > 1 && (
+      {mostra("evolucao") && fluxo.length > 1 && (
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">Evolução</h2>
           <table className="w-full border-collapse text-xs">
@@ -381,7 +424,7 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
       )}
 
       {/* Anexo com os lançamentos */}
-      {detalhado && aprovadas.length > 0 && (
+      {mostra("anexo") && detalhado && aprovadas.length > 0 && (
         <section className="quebra-pagina">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">
             Anexo — lançamentos do período

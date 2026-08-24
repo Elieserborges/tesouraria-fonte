@@ -693,3 +693,74 @@ alter table public.extrato_pedidos enable row level security;
 drop policy if exists "extrato: leitura" on public.extrato_pedidos;
 create policy "extrato: leitura" on public.extrato_pedidos
   for select to authenticated using (public.pode_editar());
+
+-- =============================================================
+-- Metas
+-- =============================================================
+/*
+ * Quanto se espera arrecadar ou gastar em cada categoria, num período.
+ *
+ * A janela é livre, como nos eventos: serve para o mês do Culto de Casais,
+ * para o ano dos Dízimos e para a temporada de um Face a Face, sem precisar
+ * de três formatos diferentes.
+ *
+ * A meta aponta para a categoria pelo nome, e não pelo id, pelo mesmo motivo
+ * dos eventos: entrada e saída de um mesmo assunto são duas categorias com o
+ * mesmo nome, e a meta de "Face a Face" quer falar das duas.
+ */
+create table if not exists public.metas (
+  id             uuid primary key default gen_random_uuid(),
+  categoria_nome text not null,
+  tipo           public.tipo_transacao not null,
+  inicio         date not null,
+  fim            date not null,
+  valor          numeric(14, 2) not null check (valor > 0),
+  observacao     text,
+  criado_por     uuid references auth.users (id) on delete set null,
+  criado_em      timestamptz not null default now(),
+  constraint metas_janela_valida check (fim >= inicio),
+  constraint metas_sem_repeticao unique (categoria_nome, tipo, inicio, fim)
+);
+
+create index if not exists metas_categoria_idx on public.metas (categoria_nome);
+
+alter table public.metas enable row level security;
+
+drop policy if exists "metas: leitura" on public.metas;
+create policy "metas: leitura" on public.metas
+  for select to authenticated using (true);
+
+drop policy if exists "metas: escrita" on public.metas;
+create policy "metas: escrita" on public.metas
+  for all to authenticated
+  using (public.pode_editar()) with check (public.pode_editar());
+
+/*
+ * O previsto ao lado do realizado.
+ *
+ * O realizado sai das transações da categoria dentro da janela, com o mesmo
+ * critério do resto do sistema: aprovadas e autorizadas, porque o dinheiro do
+ * cartão bloqueado já saiu do alcance da igreja.
+ */
+create or replace view public.resultado_por_meta
+with (security_invoker = on) as
+select
+  m.id                                                as meta_id,
+  m.categoria_nome,
+  m.tipo,
+  m.inicio,
+  m.fim,
+  m.valor                                             as previsto,
+  m.observacao,
+  coalesce(sum(t.valor), 0)::numeric                  as realizado,
+  count(t.id)                                         as lancamentos
+from public.metas m
+left join public.categorias c
+  on c.nome = m.categoria_nome and c.tipo = m.tipo
+left join public.transacoes t
+  on t.categoria_id = c.id
+ and t.tipo = m.tipo
+ and t.status in ('approved', 'authorized')
+ and t.ocorrido_em >= m.inicio::timestamptz
+ and t.ocorrido_em < (m.fim + 1)::timestamptz
+group by m.id, m.categoria_nome, m.tipo, m.inicio, m.fim, m.valor, m.observacao;
