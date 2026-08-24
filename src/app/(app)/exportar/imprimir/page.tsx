@@ -85,9 +85,18 @@ export default async function RelatorioImpresso(props: PageProps<"/exportar/impr
       )
     : [];
 
-  // Só as edições que tocam o período do relatório.
+  /*
+   * As edições que tocam o período — e, num recorte, só as das categorias
+   * escolhidas.
+   *
+   * Sem o segundo filtro, um relatório do Face a Face listava as edições do
+   * Cura-me e do Café com Dança logo abaixo dos números dele. Quem recebe não
+   * tem como saber que aquilo não faz parte do que está sendo prestado.
+   */
   const eventosDoPeriodo = eventos.filter(
-    (e) => tudo || (e.inicio <= ate && e.fim >= de),
+    (e) =>
+      (tudo || (e.inicio <= ate && e.fim >= de)) &&
+      (!filtrado || recorte.categorias.includes(e.categoria_nome)),
   );
 
   const porForma = new Map<string, { n: number; entradas: number; saidas: number }>();
