@@ -53,8 +53,8 @@ export function ExportacaoPersonalizada({
           </span>
           <span className="block text-xs text-texto-suave">
             {escolhidas.length === 0
-              ? "Escolha categorias e seções para entregar a alguém específico"
-              : `${escolhidas.length} ${escolhidas.length === 1 ? "categoria" : "categorias"} · ${secoes.length} de ${SECOES.length} seções`}
+              ? "Recorte o documento para entregar a alguém específico"
+              : `${escolhidas.join(", ")} · ${secoes.length} de ${SECOES.length} blocos`}
           </span>
         </span>
         <span aria-hidden className="text-xs text-texto-suave">
@@ -66,8 +66,8 @@ export function ExportacaoPersonalizada({
         <div className="space-y-5 border-t border-borda p-5">
           <div>
             <div className="mb-2 flex items-baseline justify-between gap-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-texto-suave">
-                Categorias
+              <h3 className="text-sm font-semibold text-texto">
+                1. Quais lançamentos entram
               </h3>
               {escolhidas.length > 0 && (
                 <button
@@ -99,17 +99,21 @@ export function ExportacaoPersonalizada({
                 );
               })}
             </div>
-            <p className="mt-2 text-xs text-texto-suave">
-              Nenhuma marcada exporta todas. Com alguma marcada, o documento
-              avisa que é parcial e o saldo da conta sai de cena — ele não diria
-              respeito ao recorte.
+            <p className="mt-2 text-xs leading-relaxed text-texto-suave">
+              Nenhuma marcada exporta todas. Com alguma marcada, só as
+              transações dessas categorias entram — e o documento avisa que é
+              parcial, escondendo o saldo da conta, que não diria respeito ao
+              recorte.
             </p>
           </div>
 
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-texto-suave">
-              O que aparece
+            <h3 className="text-sm font-semibold text-texto">
+              2. Quais blocos o documento terá
             </h3>
+            <p className="mb-2 mt-0.5 text-xs text-texto-suave">
+              Desmarque o que não interessa a quem vai receber.
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {SECOES.map((s) => {
                 const marcada = secoes.includes(s);

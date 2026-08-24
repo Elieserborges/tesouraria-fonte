@@ -22,14 +22,22 @@ export const SECOES = [
 
 export type Secao = (typeof SECOES)[number];
 
+/*
+ * O rótulo de cada bloco do documento.
+ *
+ * "Eventos" seria o nome natural do bloco das edições, mas existe uma
+ * categoria com esse nome — e as duas listas aparecem lado a lado na mesma
+ * tela. A mesma palavra significando duas coisas diferentes a um palmo de
+ * distância confunde, então o bloco diz o que mostra.
+ */
 export const SECAO_LABEL: Record<Secao, string> = {
-  resumo: "Resumo",
-  categorias: "Resultado por categoria",
+  resumo: "Resumo do período",
+  categorias: "Totais por categoria",
   cofrinho: "Cofrinho",
   formas: "Formas de pagamento",
-  eventos: "Eventos",
-  evolucao: "Evolução",
-  anexo: "Anexo com os lançamentos",
+  eventos: "Edições e seus resultados",
+  evolucao: "Evolução no tempo",
+  anexo: "Lista dos lançamentos",
 };
 
 export type Recorte = {
