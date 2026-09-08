@@ -24,8 +24,14 @@ import {
 /** Quantos dias para trás cada pedido cobre. Sobra folga para reprocessar. */
 const DIAS_DA_JANELA = 15;
 
-/** Não pede um novo relatório se já existe um pedido recente sem resposta. */
-const HORAS_ENTRE_PEDIDOS = 6;
+/*
+ * Intervalo mínimo entre dois pedidos de relatório.
+ *
+ * A janela pedida cobre 15 dias, então um pedido por dia já reprocessa tudo
+ * com folga. Pedir mais que isso não traz nada de novo e gasta a cota da API
+ * — que tem limite, como descobrimos pelos 429.
+ */
+const HORAS_ENTRE_PEDIDOS = 24;
 
 type Conta = { id: string; slug: string };
 
@@ -121,19 +127,37 @@ export async function pedirProximoRelatorio(
 ): Promise<boolean> {
   const limite = new Date(Date.now() - HORAS_ENTRE_PEDIDOS * 3600 * 1000).toISOString();
 
+  /*
+   * O freio olha qualquer pedido recente, não só os que ainda esperam.
+   *
+   * Filtrando por `pendente`, o freio nunca pegava: o relatório costuma ficar
+   * pronto antes da execução seguinte, o pedido vira `importado`, e a busca
+   * por pendentes volta vazia. O cron pediu um relatório a cada 15 minutos
+   * por semanas — 454 no total — até o Mercado Pago passar a responder 429 e
+   * a sincronização do extrato morrer em silêncio.
+   */
   const { count } = await admin
     .from("extrato_pedidos")
     .select("id", { count: "exact", head: true })
     .eq("conta_id", conta.id)
-    .eq("status", "pendente")
     .gte("criado_em", limite);
 
-  // Já tem um pedido recente esperando: pedir de novo só engorda a fila.
   if ((count ?? 0) > 0) return false;
 
   const agora = new Date();
   const inicio = new Date(agora.getTime() - DIAS_DA_JANELA * 24 * 3600 * 1000);
-  const pedido = await pedirRelatorio(token, inicio, agora);
+  let pedido;
+  try {
+    pedido = await pedirRelatorio(token, inicio, agora);
+  } catch (e) {
+    /*
+     * Cota estourada não é falha do sistema: o relatório anterior ainda vale,
+     * e a próxima execução tenta de novo. Registrar como erro só enterraria
+     * os problemas de verdade num log cheio de ruído.
+     */
+    if (e instanceof Error && e.message.includes("429")) return false;
+    throw e;
+  }
 
   // Guarda a janela arredondada, não a que pedimos: é ela que volta na
   // listagem, e é por ela que o arquivo vai ser reconhecido depois.
