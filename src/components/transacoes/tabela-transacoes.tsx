@@ -7,6 +7,7 @@ import {
   aguardandoCaptura,
   FORMA_LABEL,
   nomeUtil,
+  pagoPorOutraConta,
   type Categoria,
   type TransacaoComRelacoes,
 } from "@/lib/types";
@@ -127,6 +128,19 @@ export function TabelaTransacoes({
           title="O valor já saiu do saldo disponível, mas a loja ainda não fechou a cobrança. Some do extrato até lá, e volta se a autorização expirar."
         >
           aguardando
+        </span>
+      )}
+      {/*
+        Compra paga com dinheiro de outro banco: aparece na API porque quem
+        comprou foi a igreja, mas o saldo do Mercado Pago não se mexeu. Sem
+        esta marca, a linha pareceria uma saída que o total esqueceu de somar.
+      */}
+      {pagoPorOutraConta(t.status) && (
+        <span
+          className="ml-1.5 align-middle text-[0.65rem] font-medium uppercase tracking-wide text-texto-suave"
+          title="Paga com dinheiro de outro banco. Não saiu do Mercado Pago, então não entra no saldo nem nos totais."
+        >
+          outra conta
         </span>
       )}
     </>

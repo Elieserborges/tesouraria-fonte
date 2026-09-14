@@ -83,6 +83,15 @@ export type PagamentoMP = {
     total_paid_amount?: number;
   } | null;
   fee_details?: Array<{ type?: string; amount?: number }> | null;
+  /* Por onde o dinheiro passou — inclusive de qual banco ele saiu. */
+  point_of_interaction?: {
+    type?: string;
+    transaction_data?: {
+      bank_info?: {
+        payer?: { long_name?: string | null } | null;
+      } | null;
+    } | null;
+  } | null;
 };
 
 export async function buscarPagamento(
@@ -201,6 +210,36 @@ export function valoresDoPagamento(pagamento: PagamentoMP): {
   return { liquido, bruto, tarifa };
 }
 
+/**
+ * O banco de onde saiu o dinheiro de uma compra, quando não foi o Mercado Pago.
+ *
+ * Uma compra no Mercado Livre paga com Pix de outro banco aparece na API do
+ * Mercado Pago como pagamento feito pela igreja — é o usuário dela que compra.
+ * Mas o dinheiro sai do outro banco, e o saldo do Mercado Pago nem se mexe.
+ * Foi assim que um condensador de R$ 229,10 pago pelo PagBank apareceu como
+ * saída da conta e deixou o Fluxx abaixo do aplicativo exatamente nesse valor.
+ *
+ * O campo que separa os dois casos é o nome do banco pagador. Pix enviado do
+ * próprio saldo vem sem banco ou com o nome do Mercado Pago; só a compra paga
+ * por fora traz outro nome.
+ */
+export function bancoDeOrigemExterno(pagamento: PagamentoMP): string | null {
+  const nome =
+    pagamento.point_of_interaction?.transaction_data?.bank_info?.payer?.long_name?.trim();
+  if (!nome) return null;
+  return /mercado\s*pago/i.test(nome) ? null : nome;
+}
+
+/*
+ * Status de quem foi pago com dinheiro de outro banco.
+ *
+ * Fica fora de "approved" e "authorized", então não entra no saldo nem nos
+ * relatórios — o escopo do sistema é a conta do Mercado Pago. A linha continua
+ * existindo para ninguém achar que a compra sumiu. O mesmo texto aparece em
+ * `types.ts`, que não pode importar este arquivo por causa do `node:crypto`.
+ */
+export const STATUS_FORA_DA_CONTA = "fora_da_conta";
+
 export type ContaDestino = {
   id: string;
   mp_user_id?: string | null;
@@ -214,12 +253,18 @@ export type ContaDestino = {
  * gravado nos dois por meses.
  *
  * `categoria_id` fica de fora de propósito: quem faz upsert com esta linha
- * não pode apagar a classificação que a tesouraria já ajustou à mão.
+ * não pode apagar a classificação que a tesouraria já ajustou à mão. Pelo
+ * mesmo motivo o objeto tem sempre as mesmas chaves — num upsert em lote, uma
+ * chave presente só em algumas linhas vira nulo nas outras.
  */
 export function paraTransacao(conta: ContaDestino, pagamento: PagamentoMP) {
   const somosRecebedor =
     !conta.mp_user_id || String(pagamento.collector_id ?? "") === conta.mp_user_id;
   const { liquido, bruto, tarifa } = valoresDoPagamento(pagamento);
+
+  // Só uma compra da igreja pode ter saído de outro banco. Dinheiro que entra
+  // vindo do Santander, do Sicredi ou de onde for é entrada normal.
+  const pagoPorFora = !somosRecebedor && bancoDeOrigemExterno(pagamento) !== null;
 
   return {
     conta_id: conta.id,
@@ -230,7 +275,7 @@ export function paraTransacao(conta: ContaDestino, pagamento: PagamentoMP) {
     descricao: pagamento.description ?? null,
     contraparte: nomeContraparte(pagamento),
     metodo: pagamento.payment_method_id ?? pagamento.payment_type_id ?? null,
-    status: pagamento.status ?? "pending",
+    status: pagoPorFora ? STATUS_FORA_DA_CONTA : (pagamento.status ?? "pending"),
     ocorrido_em:
       pagamento.date_approved ?? pagamento.date_created ?? new Date().toISOString(),
     origem: "mercadopago",

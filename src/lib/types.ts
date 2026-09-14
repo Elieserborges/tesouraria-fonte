@@ -193,6 +193,16 @@ export function aguardandoCaptura(status: string): boolean {
   return status === "authorized";
 }
 
+/**
+ * Compra paga com dinheiro de outro banco, que não mexe no saldo daqui.
+ *
+ * O mesmo texto é gravado por `paraTransacao`, em `mercadopago.ts` — este
+ * arquivo vai para o navegador e não pode importar aquele, que usa `node:crypto`.
+ */
+export function pagoPorOutraConta(status: string): boolean {
+  return status === "fora_da_conta";
+}
+
 /** Movimento que só troca dinheiro de conta — não é receita nem despesa. */
 export function ehTransferencia(t: TransacaoComRelacoes): boolean {
   return t.categoria?.eh_transferencia === true;
