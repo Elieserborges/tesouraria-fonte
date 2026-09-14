@@ -136,13 +136,34 @@ export async function pedirProximoRelatorio(
    * por semanas — 454 no total — até o Mercado Pago passar a responder 429 e
    * a sincronização do extrato morrer em silêncio.
    */
-  const { count } = await admin
+  /*
+   * Lê a linha mais recente em vez de contar, e trava quando não consegue ler.
+   *
+   * A contagem vinha por uma requisição HEAD, e em produção o freio seguiu
+   * deixando passar vários pedidos por dia — com a mesma consulta devolvendo
+   * 8 quando rodada fora da Vercel. Uma contagem que chega vazia vira zero e
+   * libera o pedido; um erro, também. Ler a linha não depende de cabeçalho, e
+   * se a consulta falhar o cron simplesmente não pede: um dia sem extrato novo
+   * custa menos do que estourar a cota do Mercado Pago de novo.
+   */
+  const { data: recentes, error: erroFreio } = await admin
     .from("extrato_pedidos")
-    .select("id", { count: "exact", head: true })
+    .select("id, criado_em")
     .eq("conta_id", conta.id)
-    .gte("criado_em", limite);
+    .gte("criado_em", limite)
+    .order("criado_em", { ascending: false })
+    .limit(1);
 
-  if ((count ?? 0) > 0) return false;
+  if (erroFreio) {
+    console.warn("[extrato] freio sem resposta, pedido adiado: " + erroFreio.message);
+    return false;
+  }
+
+  const ultimo = recentes?.[0];
+  if (ultimo) {
+    console.log("[extrato] freio: último pedido em " + ultimo.criado_em + ", nada a pedir");
+    return false;
+  }
 
   const agora = new Date();
   const inicio = new Date(agora.getTime() - DIAS_DA_JANELA * 24 * 3600 * 1000);
@@ -163,7 +184,7 @@ export async function pedirProximoRelatorio(
   // listagem, e é por ela que o arquivo vai ser reconhecido depois.
   const janela = janelaDeDias(inicio, agora);
 
-  await admin.from("extrato_pedidos").insert({
+  const { error: erroGravacao } = await admin.from("extrato_pedidos").insert({
     id: pedido.id,
     conta_id: conta.id,
     inicio: janela.begin_date,
@@ -171,6 +192,28 @@ export async function pedirProximoRelatorio(
     status: "pendente",
   });
 
+  /*
+   * Todo pedido feito fica registrado.
+   *
+   * É o jeito de conferir, olhando o banco, que o freio segura: mais de uma
+   * linha destas por dia significa que ele voltou a falhar. E um pedido aceito
+   * pelo Mercado Pago que não chega a ser gravado gasta cota sem deixar rastro
+   * nenhum — melhor que apareça.
+   */
+  await admin.from("webhook_eventos").insert({
+    conta_slug: conta.slug,
+    tipo: "extrato",
+    recurso_id: String(pedido.id),
+    status: erroGravacao ? "erro" : "processado",
+    detalhe: erroGravacao
+      ? "Pedido aceito pelo Mercado Pago e não gravado: " + erroGravacao.message
+      : "Pedido de extrato de " +
+        janela.begin_date.slice(0, 10) +
+        " a " +
+        janela.end_date.slice(0, 10),
+  });
+
+  console.log("[extrato] pedido " + pedido.id + " feito");
   return true;
 }
 
