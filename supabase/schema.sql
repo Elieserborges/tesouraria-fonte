@@ -764,3 +764,86 @@ left join public.transacoes t
  and t.ocorrido_em >= m.inicio::timestamptz
  and t.ocorrido_em < (m.fim + 1)::timestamptz
 group by m.id, m.categoria_nome, m.tipo, m.inicio, m.fim, m.valor, m.observacao;
+
+-- =============================================================
+-- Kanban
+-- =============================================================
+/*
+ * Um quadro livre para o que a tesouraria acompanha antes de virar dinheiro:
+ * orçamento pedido, cotação em andamento, compra aprovada, conta paga.
+ *
+ * As etapas são de quem usa — nome, cor e ordem. O sistema não fixa nenhuma,
+ * porque cada quadro que se desenha na parede é diferente: o de um evento tem
+ * as colunas de um evento, o de uma reforma tem as de uma obra.
+ *
+ * O cartão pode ter valor, e a coluna soma o que está parado nela. É essa
+ * soma que responde "quanto de compromisso está esperando aprovação" — coisa
+ * que o extrato não mostra, porque nada disso virou lançamento ainda.
+ */
+create table if not exists public.kanban_etapas (
+  id        uuid primary key default gen_random_uuid(),
+  nome      text not null,
+  cor       text not null default '#6366f1',
+  ordem     integer not null default 0,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists kanban_etapas_ordem_idx on public.kanban_etapas (ordem);
+
+create table if not exists public.kanban_cartoes (
+  id             uuid primary key default gen_random_uuid(),
+  etapa_id       uuid not null references public.kanban_etapas (id) on delete cascade,
+  titulo         text not null,
+  valor          numeric(14, 2),
+  responsavel    text,
+  prazo          date,
+  categoria_nome text,
+  observacao     text,
+  ordem          integer not null default 0,
+  criado_por     uuid references auth.users (id) on delete set null,
+  criado_em      timestamptz not null default now(),
+  atualizado_em  timestamptz not null default now()
+);
+
+create index if not exists kanban_cartoes_etapa_idx on public.kanban_cartoes (etapa_id, ordem);
+
+drop trigger if exists kanban_cartoes_touch on public.kanban_cartoes;
+create trigger kanban_cartoes_touch
+  before update on public.kanban_cartoes
+  for each row execute function public.touch_atualizado_em();
+
+alter table public.kanban_etapas  enable row level security;
+alter table public.kanban_cartoes enable row level security;
+
+drop policy if exists "kanban etapas: leitura" on public.kanban_etapas;
+create policy "kanban etapas: leitura" on public.kanban_etapas
+  for select to authenticated using (true);
+
+drop policy if exists "kanban etapas: escrita" on public.kanban_etapas;
+create policy "kanban etapas: escrita" on public.kanban_etapas
+  for all to authenticated
+  using (public.pode_editar()) with check (public.pode_editar());
+
+drop policy if exists "kanban cartoes: leitura" on public.kanban_cartoes;
+create policy "kanban cartoes: leitura" on public.kanban_cartoes
+  for select to authenticated using (true);
+
+drop policy if exists "kanban cartoes: escrita" on public.kanban_cartoes;
+create policy "kanban cartoes: escrita" on public.kanban_cartoes
+  for all to authenticated
+  using (public.pode_editar()) with check (public.pode_editar());
+
+/*
+ * Quadro vazio não se explica sozinho. Ele nasce com quatro etapas de
+ * exemplo, que a tesouraria renomeia à vontade — e só na primeira vez, para
+ * este arquivo continuar podendo rodar de novo sem duplicar nada.
+ */
+insert into public.kanban_etapas (nome, cor, ordem)
+select *
+from (values
+  ('Solicitado', '#94a3b8', 0),
+  ('Em cotação', '#6366f1', 1),
+  ('Aprovado',   '#0ea5e9', 2),
+  ('Pago',       '#10b981', 3)
+) as padrao(nome, cor, ordem)
+where not exists (select 1 from public.kanban_etapas);

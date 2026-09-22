@@ -283,3 +283,24 @@ export type MetaComResultado = Omit<Meta, "id" | "valor"> & {
   realizado: number;
   lancamentos: number;
 };
+
+/** Coluna do quadro Kanban: nome, cor e posição são de quem usa. */
+export type KanbanEtapa = {
+  id: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+};
+
+/** Cartão do quadro. O valor é opcional — nem tudo que se acompanha tem preço. */
+export type KanbanCartao = {
+  id: string;
+  etapa_id: string;
+  titulo: string;
+  valor: number | null;
+  responsavel: string | null;
+  prazo: string | null;
+  categoria_nome: string | null;
+  observacao: string | null;
+  ordem: number;
+};

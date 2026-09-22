@@ -4,6 +4,8 @@ import type {
   Categoria,
   Conta,
   EventoComResultado,
+  KanbanCartao,
+  KanbanEtapa,
   MetaComResultado,
   RegraComUso,
   TipoTransacao,
@@ -521,4 +523,38 @@ export function porCategoria(
   }
 
   return [...mapa.values()].sort((a, b) => b.valor - a.valor);
+}
+
+/**
+ * O quadro inteiro: etapas na ordem em que aparecem e cartões na ordem de
+ * cada coluna. Vêm juntos porque um sem o outro não desenha nada.
+ */
+export async function listarKanban(): Promise<{
+  etapas: KanbanEtapa[];
+  cartoes: KanbanCartao[];
+}> {
+  const supabase = await criarClienteServidor();
+
+  const [{ data: etapas }, { data: cartoes }] = await Promise.all([
+    supabase
+      .from("kanban_etapas")
+      .select("id, nome, cor, ordem")
+      .order("ordem")
+      .order("criado_em"),
+    supabase
+      .from("kanban_cartoes")
+      .select(
+        "id, etapa_id, titulo, valor, responsavel, prazo, categoria_nome, observacao, ordem",
+      )
+      .order("ordem")
+      .order("criado_em"),
+  ]);
+
+  return {
+    etapas: (etapas ?? []) as KanbanEtapa[],
+    cartoes: ((cartoes ?? []) as KanbanCartao[]).map((c) => ({
+      ...c,
+      valor: c.valor === null ? null : Number(c.valor),
+    })),
+  };
 }
