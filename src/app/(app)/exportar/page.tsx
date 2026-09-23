@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Printer } from "lucide-react";
+import { FileText, Printer } from "lucide-react";
 import { OpcoesExportacao } from "@/components/exportar/opcoes-exportacao";
 import { listarCategorias, listarTransacoes, somar } from "@/lib/dados";
 import { ExportacaoPersonalizada } from "@/components/exportar/exportacao-personalizada";
@@ -74,12 +74,14 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
         <div>
           <h2 className="text-sm font-semibold text-texto">Quadro Kanban</h2>
           <p className="mt-1 max-w-xl text-sm text-texto-suave">
-            O quadro em uma folha deitada, com as colunas do jeito que aparecem
-            na tela — para pregar no mural. São compromissos em andamento: não
-            entram no saldo nem nos relatórios financeiros.
+            Dois papéis: o <strong className="text-texto">mural</strong>, com as
+            colunas lado a lado numa folha deitada, para pregar na parede; e o{" "}
+            <strong className="text-texto">relatório</strong>, em tabela, com
+            resumo por etapa, para levar à reunião. São compromissos em
+            andamento: não entram no saldo nem nos relatórios financeiros.
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <Link
             href="/kanban/imprimir"
             target="_blank"
@@ -87,7 +89,16 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
             prefetch={false}
             className="inline-flex items-center gap-2 rounded-xl bg-primaria px-4 py-2.5 text-sm font-semibold text-primaria-contraste transition hover:opacity-90"
           >
-            <Printer size={16} aria-hidden /> Imprimir quadro
+            <Printer size={16} aria-hidden /> Mural
+          </Link>
+          <Link
+            href="/kanban/imprimir?modelo=relatorio"
+            target="_blank"
+            rel="noopener"
+            prefetch={false}
+            className="inline-flex items-center gap-2 rounded-xl border border-borda px-4 py-2.5 text-sm font-semibold text-texto transition hover:bg-superficie-2"
+          >
+            <FileText size={16} aria-hidden /> Relatório
           </Link>
         </div>
       </section>
