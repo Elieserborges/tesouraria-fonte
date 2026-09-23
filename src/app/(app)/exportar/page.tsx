@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { OpcoesExportacao } from "@/components/exportar/opcoes-exportacao";
 import { listarCategorias, listarTransacoes, somar } from "@/lib/dados";
 import { ExportacaoPersonalizada } from "@/components/exportar/exportacao-personalizada";
@@ -60,6 +62,42 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
       <OpcoesExportacao consulta={consulta} lancamentos={aprovadas.length} />
 
       <ExportacaoPersonalizada categorias={nomes} consulta={consulta} />
+
+      {/*
+        O quadro sai daqui também.
+
+        Ele não tem período: um cartão fica parado numa etapa até alguém mexer,
+        e filtrar por data esconderia justamente o que está atrasado. Por isso
+        o bloco é simples e ignora o seletor acima.
+      */}
+      <section className="cartao flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-texto">Quadro Kanban</h2>
+          <p className="mt-1 max-w-xl text-sm text-texto-suave">
+            Os cartões de cada etapa, com responsável, prazo e valor previsto.
+            São compromissos em andamento — não entram no saldo nem nos
+            relatórios financeiros.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href="/api/exportar/kanban"
+            prefetch={false}
+            className="inline-flex items-center gap-2 rounded-xl border border-borda px-4 py-2.5 text-sm font-semibold text-texto transition hover:bg-superficie-2"
+          >
+            <FileSpreadsheet size={16} aria-hidden /> Planilha
+          </Link>
+          <Link
+            href="/kanban/imprimir"
+            target="_blank"
+            rel="noopener"
+            prefetch={false}
+            className="inline-flex items-center gap-2 rounded-xl bg-primaria px-4 py-2.5 text-sm font-semibold text-primaria-contraste transition hover:opacity-90"
+          >
+            <FileText size={16} aria-hidden /> Gerar PDF
+          </Link>
+        </div>
+      </section>
 
       {/*
         Importar fica junto de exportar porque é o mesmo assunto: a troca de

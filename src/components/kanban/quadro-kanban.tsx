@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   CornerDownRight,
+  FileSpreadsheet,
+  FileText,
   Pencil,
   Plus,
   SlidersHorizontal,
@@ -129,15 +132,39 @@ export function QuadroKanban({
             ? "Arraste o cartão ou toque em Mover."
             : "Seu perfil vê o quadro, mas não altera."}
         </p>
-        {editavel && (
-          <button
-            type="button"
-            onClick={() => setEditandoEtapas(true)}
+        {/*
+          Exportar fica aqui, e não só na aba Exportar, porque quem precisa
+          levar o quadro para uma reunião está olhando para ele neste momento.
+          Vale também para quem só tem leitura: entregar o quadro não é
+          alterá-lo.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/api/exportar/kanban"
+            prefetch={false}
             className="inline-flex items-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm font-medium text-texto transition hover:bg-superficie-2"
           >
-            <SlidersHorizontal size={15} aria-hidden /> Editar etapas
-          </button>
-        )}
+            <FileSpreadsheet size={15} aria-hidden /> Planilha
+          </Link>
+          <Link
+            href="/kanban/imprimir"
+            target="_blank"
+            rel="noopener"
+            prefetch={false}
+            className="inline-flex items-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm font-medium text-texto transition hover:bg-superficie-2"
+          >
+            <FileText size={15} aria-hidden /> PDF
+          </Link>
+          {editavel && (
+            <button
+              type="button"
+              onClick={() => setEditandoEtapas(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm font-medium text-texto transition hover:bg-superficie-2"
+            >
+              <SlidersHorizontal size={15} aria-hidden /> Editar etapas
+            </button>
+          )}
+        </div>
       </div>
 
       {erro && (
