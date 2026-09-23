@@ -284,6 +284,15 @@ export type MetaComResultado = Omit<Meta, "id" | "valor"> & {
   lancamentos: number;
 };
 
+/*
+ * Letras mínimas nos campos obrigatórios do cartão.
+ *
+ * Campo obrigatório que aceita qualquer coisa vira campo com um ponto
+ * dentro: quem tem pressa preenche "x" e segue. Com três letras não dá para
+ * escapar sem escrever ao menos um começo de nome.
+ */
+export const MINIMO_CARTAO = 3;
+
 /** Coluna do quadro Kanban: nome, cor e posição são de quem usa. */
 export type KanbanEtapa = {
   id: string;

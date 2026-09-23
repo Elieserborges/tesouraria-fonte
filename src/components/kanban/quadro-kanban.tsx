@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
-import type { KanbanCartao, KanbanEtapa } from "@/lib/types";
+import { MINIMO_CARTAO, type KanbanCartao, type KanbanEtapa } from "@/lib/types";
 import {
   excluirCartao,
   excluirEtapa,
@@ -368,6 +368,7 @@ export function QuadroKanban({
                   name="titulo"
                   defaultValue={emEdicao?.titulo ?? ""}
                   required
+                  minLength={MINIMO_CARTAO}
                   autoFocus
                   className={CAMPO}
                 />
@@ -410,6 +411,7 @@ export function QuadroKanban({
                     name="responsavel"
                     defaultValue={emEdicao?.responsavel ?? ""}
                     required
+                    minLength={MINIMO_CARTAO}
                     placeholder="quem toca isso"
                     className={CAMPO}
                   />

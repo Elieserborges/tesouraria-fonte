@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obterSessao } from "@/lib/supabase/server";
-import { podeEditar } from "@/lib/types";
+import { MINIMO_CARTAO, podeEditar } from "@/lib/types";
 
 export type EstadoKanban = { erro?: string; sucesso?: string };
 
@@ -35,14 +35,28 @@ export async function salvarCartao(formData: FormData): Promise<EstadoKanban> {
     const titulo = String(formData.get("titulo") ?? "").trim();
     const responsavel = String(formData.get("responsavel") ?? "").trim();
 
-    if (!titulo) return { erro: "O cartão precisa de um título." };
     if (!etapaId) return { erro: "Escolha a etapa do cartão." };
+
+    /*
+     * Três caracteres, no mínimo.
+     *
+     * Campo obrigatório que aceita qualquer coisa vira campo com um ponto
+     * dentro: quem tem pressa preenche "x" e segue. Com três letras não dá
+     * para escapar sem escrever ao menos um começo de nome.
+     */
+    if (titulo.length < MINIMO_CARTAO) {
+      return { erro: `O título precisa de pelo menos ${MINIMO_CARTAO} caracteres.` };
+    }
     /*
      * Sem dono, o cartão só acumula. A exigência vale aqui e não no banco
      * porque os cartões criados antes desta regra continuam válidos — eles
      * pedem um responsável na próxima vez que forem editados.
      */
-    if (!responsavel) return { erro: "Diga quem é o responsável pelo cartão." };
+    if (responsavel.length < MINIMO_CARTAO) {
+      return {
+        erro: `Diga quem é o responsável — pelo menos ${MINIMO_CARTAO} caracteres.`,
+      };
+    }
 
     const dados = {
       etapa_id: etapaId,
