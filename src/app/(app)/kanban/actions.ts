@@ -33,15 +33,22 @@ export async function salvarCartao(formData: FormData): Promise<EstadoKanban> {
     const id = String(formData.get("id") ?? "");
     const etapaId = String(formData.get("etapa_id") ?? "");
     const titulo = String(formData.get("titulo") ?? "").trim();
+    const responsavel = String(formData.get("responsavel") ?? "").trim();
 
     if (!titulo) return { erro: "O cartão precisa de um título." };
     if (!etapaId) return { erro: "Escolha a etapa do cartão." };
+    /*
+     * Sem dono, o cartão só acumula. A exigência vale aqui e não no banco
+     * porque os cartões criados antes desta regra continuam válidos — eles
+     * pedem um responsável na próxima vez que forem editados.
+     */
+    if (!responsavel) return { erro: "Diga quem é o responsável pelo cartão." };
 
     const dados = {
       etapa_id: etapaId,
       titulo,
       valor: paraNumero(formData.get("valor")),
-      responsavel: String(formData.get("responsavel") ?? "").trim() || null,
+      responsavel,
       prazo: String(formData.get("prazo") ?? "") || null,
       categoria_nome: String(formData.get("categoria_nome") ?? "").trim() || null,
       observacao: String(formData.get("observacao") ?? "").trim() || null,

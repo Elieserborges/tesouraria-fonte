@@ -544,7 +544,7 @@ export async function listarKanban(): Promise<{
     supabase
       .from("kanban_cartoes")
       .select(
-        "id, etapa_id, titulo, valor, responsavel, prazo, categoria_nome, observacao, ordem",
+        "id, etapa_id, titulo, valor, responsavel, prazo, categoria_nome, observacao, ordem, criado_em",
       )
       .order("ordem")
       .order("criado_em"),

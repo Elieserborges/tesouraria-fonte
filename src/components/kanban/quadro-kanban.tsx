@@ -16,7 +16,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { formatarData, formatarMoeda } from "@/lib/format";
+import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import type { KanbanCartao, KanbanEtapa } from "@/lib/types";
 import {
   excluirCartao,
@@ -252,13 +252,22 @@ export function QuadroKanban({
                           )}
                         </div>
 
-                        {(cartao.responsavel || cartao.prazo) && (
-                          <p className="mt-1 text-xs text-texto-suave">
-                            {cartao.responsavel}
-                            {cartao.responsavel && cartao.prazo ? " · " : ""}
-                            {cartao.prazo && formatarData(`${cartao.prazo}T12:00:00`)}
-                          </p>
-                        )}
+                        {/*
+                          Responsável em falta aparece em destaque, e não
+                          escondido: o cartão sem dono é o que atrasa, e agora
+                          o formulário exige um — só os antigos podem estar sem.
+                        */}
+                        <p className="mt-1 text-xs text-texto-suave">
+                          {cartao.responsavel ?? (
+                            <span className="text-atencao">sem responsável</span>
+                          )}
+                          {cartao.prazo &&
+                            ` · prazo ${formatarData(`${cartao.prazo}T12:00:00`)}`}
+                        </p>
+
+                        <p className="mt-0.5 text-[0.7rem] text-texto-suave/70">
+                          criado em {formatarData(cartao.criado_em)}
+                        </p>
 
                         {cartao.categoria_nome && (
                           <span className="mt-2 inline-block rounded-full bg-superficie-2 px-2 py-0.5 text-[0.7rem] text-texto-suave">
@@ -400,7 +409,8 @@ export function QuadroKanban({
                   <input
                     name="responsavel"
                     defaultValue={emEdicao?.responsavel ?? ""}
-                    placeholder="opcional"
+                    required
+                    placeholder="quem toca isso"
                     className={CAMPO}
                   />
                 </label>
@@ -442,6 +452,14 @@ export function QuadroKanban({
                   className={CAMPO}
                 />
               </label>
+
+              {/* A data de criação não se edita: ela é o registro de quando a
+                  coisa começou a esperar. */}
+              {emEdicao && (
+                <p className="text-xs text-texto-suave">
+                  Criado em {formatarDataHora(emEdicao.criado_em)}
+                </p>
+              )}
 
               <button
                 type="submit"

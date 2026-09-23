@@ -303,4 +303,6 @@ export type KanbanCartao = {
   categoria_nome: string | null;
   observacao: string | null;
   ordem: number;
+  /** Quando o cartão entrou no quadro — a idade dele é informação. */
+  criado_em: string;
 };

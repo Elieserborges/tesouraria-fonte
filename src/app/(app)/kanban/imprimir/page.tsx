@@ -112,6 +112,7 @@ export default async function KanbanImpresso() {
                 <tr className="border-b border-borda bg-superficie-2">
                   <th className={th}>Cartão</th>
                   <th className={th}>Responsável</th>
+                  <th className={th}>Criado em</th>
                   <th className={th}>Prazo</th>
                   <th className={th}>Categoria</th>
                   <th className={`${th} text-right`}>Valor</th>
@@ -129,6 +130,9 @@ export default async function KanbanImpresso() {
                       )}
                     </td>
                     <td className={td}>{cartao.responsavel ?? "—"}</td>
+                    <td className={`${td} whitespace-nowrap`}>
+                      {formatarData(cartao.criado_em)}
+                    </td>
                     <td className={`${td} whitespace-nowrap`}>
                       {cartao.prazo ? formatarData(`${cartao.prazo}T12:00:00`) : "—"}
                     </td>
