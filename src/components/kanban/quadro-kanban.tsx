@@ -8,11 +8,10 @@ import {
   ArrowRight,
   Check,
   CornerDownRight,
-  FileSpreadsheet,
-  FileText,
   Info,
   Pencil,
   Plus,
+  Printer,
   SlidersHorizontal,
   Trash2,
   X,
@@ -142,20 +141,13 @@ export function QuadroKanban({
         */}
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/api/exportar/kanban"
-            prefetch={false}
-            className="inline-flex items-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm font-medium text-texto transition hover:bg-superficie-2"
-          >
-            <FileSpreadsheet size={15} aria-hidden /> Planilha
-          </Link>
-          <Link
             href="/kanban/imprimir"
             target="_blank"
             rel="noopener"
             prefetch={false}
             className="inline-flex items-center gap-2 rounded-lg border border-borda px-3 py-2 text-sm font-medium text-texto transition hover:bg-superficie-2"
           >
-            <FileText size={15} aria-hidden /> PDF
+            <Printer size={15} aria-hidden /> Imprimir
           </Link>
           {editavel && (
             <button

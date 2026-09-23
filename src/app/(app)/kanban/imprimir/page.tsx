@@ -9,11 +9,13 @@ import { obterSessao } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "Quadro Kanban · Fluxx Finance" };
 
 /**
- * O quadro em papel.
+ * O quadro em papel, do jeito que ele é na tela.
  *
- * Na tela as colunas ficam lado a lado, o que só funciona com o dedo rolando
- * a página. No papel elas viram seções empilhadas, uma tabela cada: é a mesma
- * informação numa forma que se lê de cima para baixo e se leva para a reunião.
+ * Este documento vai para a parede, não para a pasta: quem passa em frente ao
+ * mural lê em três segundos, e é a forma das colunas que faz essa leitura —
+ * uma tabela obrigaria a pessoa a parar e procurar em que etapa cada coisa
+ * está. Por isso as colunas continuam lado a lado, e a folha é que vira de
+ * lado para caber.
  */
 export default async function KanbanImpresso() {
   const sessao = await obterSessao();
@@ -29,141 +31,137 @@ export default async function KanbanImpresso() {
   });
 
   const totalGeral = colunas.reduce((soma, c) => soma + c.total, 0);
-  const totalCartoes = cartoes.length;
-
-  const th =
-    "px-3 py-2 text-left text-[11px] uppercase tracking-wide font-semibold text-texto-suave";
-  const td = "px-3 py-1.5 align-top";
 
   return (
-    <div className="mx-auto max-w-[210mm] space-y-6 text-texto">
+    <div className="mx-auto max-w-[297mm] space-y-4 text-texto">
+      {/*
+        A folha deitada.
+
+        Quatro colunas em pé ficam com a largura de um dedo, e o título de
+        cada cartão quebra em cinco linhas. Deitada, cada coluna tem espaço
+        para um cartão legível de longe.
+      */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: "@media print { @page { size: A4 landscape; margin: 10mm; } }",
+        }}
+      />
+
       <BotaoImprimir />
 
-      <header className="flex items-start justify-between gap-6 border-b-2 border-texto pb-4">
+      <header className="flex items-end justify-between gap-6 border-b-2 border-texto pb-3">
         <div>
           <Logo className="text-texto" />
-          <p className="text-[10px] text-texto-suave">{SITE_HOST}</p>
-          <p className="mt-3 text-lg font-semibold">Quadro Kanban</p>
-          <p className="text-sm text-texto-suave">
-            O que está em andamento — pedidos, cotações e compras antes de
-            virarem lançamento.
+          <p className="mt-2 text-base font-semibold leading-tight">Quadro Kanban</p>
+          <p className="text-xs text-texto-suave">
+            Comunidade Cristã Fonte da Vida · {cartoes.length}{" "}
+            {cartoes.length === 1 ? "cartão" : "cartões"}
+            {totalGeral > 0 && ` · ${formatarMoeda(totalGeral)} em andamento`}
           </p>
         </div>
-        <div className="text-right text-xs text-texto-suave">
-          <p className="font-medium text-texto">Comunidade Cristã Fonte da Vida</p>
-          <p>CNPJ 07.913.258/0001-28</p>
-          <p className="mt-2">Emitido em {formatarDataHora(new Date())}</p>
+        <div className="text-right text-[10px] text-texto-suave">
+          <p>{formatarDataHora(new Date())}</p>
           {sessao?.perfil?.nome && <p>por {sessao.perfil.nome}</p>}
+          <p>{SITE_HOST}</p>
         </div>
       </header>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">
-          Resumo por etapa
-        </h2>
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-borda bg-superficie-2">
-              <th className={th}>Etapa</th>
-              <th className={`${th} text-right`}>Cartões</th>
-              <th className={`${th} text-right`}>Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {colunas.map(({ etapa, cartoes: daEtapa, total }) => (
-              <tr key={etapa.id} className="border-b border-borda/60">
-                <td className={td}>{etapa.nome}</td>
-                <td className={`${td} text-right tabular-nums`}>{daEtapa.length}</td>
-                <td className={`${td} text-right font-medium tabular-nums`}>
-                  {total > 0 ? formatarMoeda(total) : "—"}
-                </td>
-              </tr>
-            ))}
-            <tr className="border-t-2 border-texto font-semibold">
-              <td className={td}>Total</td>
-              <td className={`${td} text-right tabular-nums`}>{totalCartoes}</td>
-              <td className={`${td} text-right tabular-nums`}>
-                {formatarMoeda(totalGeral)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      {colunas.map(({ etapa, cartoes: daEtapa, total }) => (
-        <section key={etapa.id} className="break-inside-avoid">
-          <h2 className="mb-2 flex items-baseline justify-between text-sm font-semibold uppercase tracking-wide">
-            <span>
-              {etapa.nome}{" "}
-              <span className="text-texto-suave">
-                ({daEtapa.length} {daEtapa.length === 1 ? "cartão" : "cartões"})
+      <div
+        className="grid items-start gap-3"
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(colunas.length, 1)}, minmax(0, 1fr))`,
+        }}
+      >
+        {colunas.map(({ etapa, cartoes: daEtapa, total }) => (
+          <section
+            key={etapa.id}
+            className="break-inside-avoid overflow-hidden rounded-xl border border-borda bg-superficie-2"
+          >
+            <header className="flex items-center gap-1.5 border-b border-borda px-2 py-1.5">
+              <span
+                aria-hidden
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: etapa.cor }}
+              />
+              <h2 className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wide">
+                {etapa.nome}
+              </h2>
+              <span className="shrink-0 text-[10px] tabular-nums text-texto-suave">
+                {daEtapa.length}
               </span>
-            </span>
+            </header>
+
             {total > 0 && (
-              <span className="tabular-nums text-texto-suave">{formatarMoeda(total)}</span>
+              <p className="px-2 pt-1.5 text-[10px] font-medium tabular-nums text-texto-suave">
+                {formatarMoeda(total)}
+              </p>
             )}
-          </h2>
 
-          {daEtapa.length === 0 ? (
-            <p className="text-sm text-texto-suave">Nenhum cartão nesta etapa.</p>
-          ) : (
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-borda bg-superficie-2">
-                  <th className={th}>Cartão</th>
-                  <th className={th}>Responsável</th>
-                  <th className={th}>Criado em</th>
-                  <th className={th}>Prazo</th>
-                  <th className={th}>Categoria</th>
-                  <th className={`${th} text-right`}>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {daEtapa.map((cartao) => (
-                  <tr key={cartao.id} className="border-b border-borda/60">
-                    <td className={td}>
+            <div className="space-y-2 p-2">
+              {daEtapa.length === 0 && (
+                <p className="py-6 text-center text-[9px] uppercase tracking-wide text-texto-suave">
+                  vazio
+                </p>
+              )}
+
+              {daEtapa.map((cartao) => (
+                <article
+                  key={cartao.id}
+                  className="break-inside-avoid rounded-lg border border-borda bg-superficie p-2"
+                >
+                  <div className="flex items-start justify-between gap-1.5">
+                    <p className="min-w-0 flex-1 text-[11px] font-semibold leading-snug">
                       {cartao.titulo}
-                      {cartao.motivo && (
-                        <span className="block text-xs text-texto-suave">
-                          {cartao.motivo}
-                        </span>
-                      )}
-                    </td>
-                    <td className={td}>{cartao.responsavel ?? "—"}</td>
-                    <td className={`${td} whitespace-nowrap`}>
-                      {formatarData(cartao.criado_em)}
-                    </td>
-                    <td className={`${td} whitespace-nowrap`}>
-                      {cartao.prazo ? formatarData(`${cartao.prazo}T12:00:00`) : "—"}
-                    </td>
-                    <td className={td}>{cartao.categoria_nome ?? "—"}</td>
-                    <td className={`${td} whitespace-nowrap text-right font-medium tabular-nums`}>
-                      {cartao.valor === null ? "—" : formatarMoeda(cartao.valor)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      ))}
+                    </p>
+                    {cartao.valor !== null && (
+                      <span className="shrink-0 text-[11px] font-semibold tabular-nums">
+                        {formatarMoeda(cartao.valor)}
+                      </span>
+                    )}
+                  </div>
 
-      <footer className="border-t border-borda pt-4 text-[10px] text-texto-suave">
+                  <p className="mt-0.5 text-[10px] text-texto-suave">
+                    {cartao.responsavel ?? "sem responsável"}
+                    {cartao.prazo &&
+                      ` · prazo ${formatarData(`${cartao.prazo}T12:00:00`)}`}
+                  </p>
+
+                  {/*
+                    No mural o motivo aparece: é ele que responde a pergunta de
+                    quem passa e não acompanhou a conversa. Na tela ele fica
+                    recolhido porque lá a coluna é estreita e se rola muito.
+                  */}
+                  {cartao.motivo && (
+                    <p className="mt-1 text-[9px] leading-snug text-texto-suave">
+                      {cartao.motivo}
+                    </p>
+                  )}
+
+                  <p className="mt-1 flex items-center justify-between gap-1 text-[9px] text-texto-suave">
+                    <span>{formatarData(cartao.criado_em)}</span>
+                    {cartao.categoria_nome && (
+                      <span className="truncate rounded-full bg-superficie-2 px-1.5 py-0.5">
+                        {cartao.categoria_nome}
+                      </span>
+                    )}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <footer className="border-t border-borda pt-2 text-[9px] text-texto-suave">
         {/*
-          O aviso que separa este documento do relatório financeiro.
-
-          Os dois saem com a mesma cara, e alguém que receba só este pode
-          somar os valores achando que é dinheiro que já saiu da conta. Aqui
-          nada disso virou lançamento: é o que se pretende gastar.
+          O aviso que separa este papel do relatório financeiro: pregado no
+          mural, ele some do contexto, e alguém pode somar os valores achando
+          que é dinheiro que já saiu da conta.
         */}
         <p>
-          Os valores acima são estimativas do que está em andamento. Nenhum
-          deles é lançamento: não entram no saldo nem nos relatórios
-          financeiros. Valores em reais.
-        </p>
-        <p className="mt-1">
-          O quadro atualizado fica em{" "}
-          <span className="font-medium text-texto">{SITE_HOST}/kanban</span>.
+          Valores previstos do que está em andamento — nada aqui é lançamento,
+          não entra no saldo nem nos relatórios financeiros. Quadro atualizado
+          em {SITE_HOST}/kanban.
         </p>
       </footer>
     </div>

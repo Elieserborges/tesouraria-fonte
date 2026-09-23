@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileSpreadsheet, FileText } from "lucide-react";
+import { Printer } from "lucide-react";
 import { OpcoesExportacao } from "@/components/exportar/opcoes-exportacao";
 import { listarCategorias, listarTransacoes, somar } from "@/lib/dados";
 import { ExportacaoPersonalizada } from "@/components/exportar/exportacao-personalizada";
@@ -74,19 +74,12 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
         <div>
           <h2 className="text-sm font-semibold text-texto">Quadro Kanban</h2>
           <p className="mt-1 max-w-xl text-sm text-texto-suave">
-            Os cartões de cada etapa, com responsável, prazo e valor previsto.
-            São compromissos em andamento — não entram no saldo nem nos
-            relatórios financeiros.
+            O quadro em uma folha deitada, com as colunas do jeito que aparecem
+            na tela — para pregar no mural. São compromissos em andamento: não
+            entram no saldo nem nos relatórios financeiros.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Link
-            href="/api/exportar/kanban"
-            prefetch={false}
-            className="inline-flex items-center gap-2 rounded-xl border border-borda px-4 py-2.5 text-sm font-semibold text-texto transition hover:bg-superficie-2"
-          >
-            <FileSpreadsheet size={16} aria-hidden /> Planilha
-          </Link>
           <Link
             href="/kanban/imprimir"
             target="_blank"
@@ -94,7 +87,7 @@ export default async function PaginaExportar(props: PageProps<"/exportar">) {
             prefetch={false}
             className="inline-flex items-center gap-2 rounded-xl bg-primaria px-4 py-2.5 text-sm font-semibold text-primaria-contraste transition hover:opacity-90"
           >
-            <FileText size={16} aria-hidden /> Gerar PDF
+            <Printer size={16} aria-hidden /> Imprimir quadro
           </Link>
         </div>
       </section>
