@@ -119,8 +119,18 @@ export function FolhaMural({
                     )}
                   </div>
 
+                  {/*
+                    O "Resp:" na frente do nome.
+
+                    Sozinho, um nome solto embaixo do título parece parte do
+                    pedido — "Cadeiras, Thaluan" se lê como se o Thaluan fosse
+                    o vendedor. Duas letras e dois pontos resolvem a dúvida de
+                    quem lê o mural sem conhecer o quadro.
+                  */}
                   <p className="mt-0.5 text-[10px] text-texto-suave">
-                    {cartao.responsavel ?? "sem responsável"}
+                    {cartao.responsavel
+                      ? `Resp: ${cartao.responsavel}`
+                      : "sem responsável"}
                     {cartao.prazo &&
                       ` · prazo ${formatarData(`${cartao.prazo}T12:00:00`)}`}
                   </p>

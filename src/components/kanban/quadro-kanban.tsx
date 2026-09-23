@@ -252,7 +252,9 @@ export function QuadroKanban({
                           o formulário exige um — só os antigos podem estar sem.
                         */}
                         <p className="mt-1 text-xs text-texto-suave">
-                          {cartao.responsavel ?? (
+                          {cartao.responsavel ? (
+                            `Resp: ${cartao.responsavel}`
+                          ) : (
                             <span className="text-atencao">sem responsável</span>
                           )}
                           {cartao.prazo &&
