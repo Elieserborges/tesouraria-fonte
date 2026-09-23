@@ -847,3 +847,14 @@ from (values
   ('Pago',       '#10b981', 3)
 ) as padrao(nome, cor, ordem)
 where not exists (select 1 from public.kanban_etapas);
+
+/*
+ * O campo livre do cartão virou o "Motivo", e agora é obrigatório na tela.
+ *
+ * A coluna manteve o nome antigo de propósito: renomear deixaria o quadro
+ * vazio na janela entre o deploy e a migração, e a consulta já apelida a
+ * coluna de `motivo`. Continua aceitando nulo por causa dos cartões criados
+ * antes da regra.
+ */
+comment on column public.kanban_cartoes.observacao is
+  'Motivo do cartão — por que ele existe. Nome antigo, mantido para não migrar.';

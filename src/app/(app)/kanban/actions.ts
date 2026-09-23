@@ -34,6 +34,7 @@ export async function salvarCartao(formData: FormData): Promise<EstadoKanban> {
     const etapaId = String(formData.get("etapa_id") ?? "");
     const titulo = String(formData.get("titulo") ?? "").trim();
     const responsavel = String(formData.get("responsavel") ?? "").trim();
+    const motivo = String(formData.get("motivo") ?? "").trim();
 
     if (!etapaId) return { erro: "Escolha a etapa do cartão." };
 
@@ -57,6 +58,16 @@ export async function salvarCartao(formData: FormData): Promise<EstadoKanban> {
         erro: `Diga quem é o responsável — pelo menos ${MINIMO_CARTAO} caracteres.`,
       };
     }
+    /*
+     * O motivo é o que sobra quando o cartão anda de mão em mão: seis meses
+     * depois ninguém lembra por que "Cadeiras" entrou na fila, e quem for
+     * aprovar precisa disso mais do que do título.
+     */
+    if (motivo.length < MINIMO_CARTAO) {
+      return {
+        erro: `Escreva o motivo do cartão — pelo menos ${MINIMO_CARTAO} caracteres.`,
+      };
+    }
 
     const dados = {
       etapa_id: etapaId,
@@ -65,7 +76,8 @@ export async function salvarCartao(formData: FormData): Promise<EstadoKanban> {
       responsavel,
       prazo: String(formData.get("prazo") ?? "") || null,
       categoria_nome: String(formData.get("categoria_nome") ?? "").trim() || null,
-      observacao: String(formData.get("observacao") ?? "").trim() || null,
+      // A coluna guarda o motivo; o nome antigo ficou para não exigir migração.
+      observacao: motivo,
     };
 
     if (id) {

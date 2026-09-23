@@ -10,6 +10,7 @@ import {
   CornerDownRight,
   FileSpreadsheet,
   FileText,
+  Info,
   Pencil,
   Plus,
   SlidersHorizontal,
@@ -60,6 +61,7 @@ export function QuadroKanban({
   const [editandoEtapas, setEditandoEtapas] = useState(false);
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [movendo, setMovendo] = useState<string | null>(null);
+  const [motivoAberto, setMotivoAberto] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   /*
@@ -275,12 +277,33 @@ export function QuadroKanban({
                           </span>
                         )}
 
-                        {cartao.observacao && (
-                          <p className="mt-2 text-xs text-texto-suave">{cartao.observacao}</p>
-                        )}
+                        {/*
+                          O motivo fica guardado atrás do botão.
 
-                        {editavel && (
+                          Ele é um parágrafo, e um parágrafo em cada cartão
+                          transforma a coluna numa parede de texto onde não se
+                          acha mais nada. Quem precisa da justificativa abre a
+                          do cartão que interessa; no PDF ela sai por extenso,
+                          porque lá o documento é para ler.
+                        */}
+                        {(cartao.motivo || editavel) && (
                           <div className="mt-2 flex items-center gap-1 border-t border-borda pt-2">
+                            {cartao.motivo && (
+                              <button
+                                type="button"
+                                aria-expanded={motivoAberto === cartao.id}
+                                onClick={() =>
+                                  setMotivoAberto(
+                                    motivoAberto === cartao.id ? null : cartao.id,
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+                              >
+                                <Info size={13} aria-hidden /> Motivo
+                              </button>
+                            )}
+                            {editavel && (
+                              <>
                             <button
                               type="button"
                               onClick={() =>
@@ -306,7 +329,15 @@ export function QuadroKanban({
                             >
                               <Trash2 size={13} />
                             </button>
+                              </>
+                            )}
                           </div>
+                        )}
+
+                        {motivoAberto === cartao.id && cartao.motivo && (
+                          <p className="mt-2 rounded-lg bg-superficie-2 p-2 text-xs text-texto-suave">
+                            {cartao.motivo}
+                          </p>
                         )}
 
                         {movendo === cartao.id && (
@@ -445,12 +476,14 @@ export function QuadroKanban({
               </div>
 
               <label className="block text-sm">
-                <span className="mb-1 block text-xs text-texto-suave">Observação</span>
+                <span className="mb-1 block text-xs text-texto-suave">Motivo</span>
                 <textarea
-                  name="observacao"
-                  defaultValue={emEdicao?.observacao ?? ""}
+                  name="motivo"
+                  defaultValue={emEdicao?.motivo ?? ""}
                   rows={2}
-                  placeholder="opcional"
+                  required
+                  minLength={MINIMO_CARTAO}
+                  placeholder="por que isso precisa acontecer"
                   className={CAMPO}
                 />
               </label>

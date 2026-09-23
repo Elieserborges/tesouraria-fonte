@@ -43,7 +43,7 @@ export async function GET() {
     "Criado em",
     "Prazo",
     "Categoria",
-    "Observação",
+    "Motivo",
   ];
 
   // Na ordem do quadro: coluna por coluna, cartão por cartão. Quem confere
@@ -61,7 +61,7 @@ export async function GET() {
           new Date(c.criado_em).toLocaleDateString("pt-BR"),
           data(c.prazo),
           c.categoria_nome ?? "",
-          c.observacao ?? "",
+          c.motivo ?? "",
         ]
           .map(campo)
           .join(";"),

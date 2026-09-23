@@ -123,9 +123,9 @@ export default async function KanbanImpresso() {
                   <tr key={cartao.id} className="border-b border-borda/60">
                     <td className={td}>
                       {cartao.titulo}
-                      {cartao.observacao && (
+                      {cartao.motivo && (
                         <span className="block text-xs text-texto-suave">
-                          {cartao.observacao}
+                          {cartao.motivo}
                         </span>
                       )}
                     </td>

@@ -310,7 +310,15 @@ export type KanbanCartao = {
   responsavel: string | null;
   prazo: string | null;
   categoria_nome: string | null;
-  observacao: string | null;
+  /*
+   * Por que este cartão existe — obrigatório para cartão novo.
+   *
+   * No banco a coluna continua se chamando "observacao", nome de quando o
+   * campo era livre e opcional. Renomear a coluna deixaria o quadro vazio na
+   * janela entre o deploy e a migração, e o apelido na consulta resolve sem
+   * esse risco. Continua aceitando nulo por causa dos cartões antigos.
+   */
+  motivo: string | null;
   ordem: number;
   /** Quando o cartão entrou no quadro — a idade dele é informação. */
   criado_em: string;
