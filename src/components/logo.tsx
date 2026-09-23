@@ -33,9 +33,18 @@ export function Logo({
         aria-label="Fluxx Finance"
       >
         <span aria-hidden>F</span>
+        {/*
+          A barra é um degradê recortado no formato da letra: o "l" em si é
+          transparente e quem aparece é o fundo.
+
+          Na impressão o navegador não pinta fundo nenhum — a opção vem
+          desligada na caixa de diálogo —, e a marca saía "F uxx", com um
+          buraco no lugar da barra. No papel, então, ela vira tinta de verdade,
+          na mesma cor das outras letras.
+        */}
         <span
           aria-hidden
-          className="mx-[0.02em] inline-block -skew-x-12 bg-gradient-to-b from-marca-400 to-marca-500 bg-clip-text text-transparent"
+          className="mx-[0.02em] inline-block -skew-x-12 bg-gradient-to-b from-marca-400 to-marca-500 bg-clip-text text-transparent print:bg-none print:bg-clip-border print:text-inherit"
         >
           l
         </span>
